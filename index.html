@@ -1,0 +1,658 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TN Passport Generator</title>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+
+:root {
+  --ink:  #1a1a2e;
+  --dim:  #7a7870;
+  --bg:   #ede9e2;
+  --page: #fffdf8;
+  --dot:  #c5c2bb;
+  --line: #ddd9d3;
+  --acc:  #4a4262;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+button,input,select{font-family:inherit;}
+body{font-family:'Georgia',serif;background:var(--bg);color:var(--ink);}
+
+/* ── CONFIG ──────────────────────── */
+#cfg{background:var(--acc);color:#f0ede6;padding:18px 24px;display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start;border-bottom:3px solid #2a2240;}
+.cfg-sec{display:flex;flex-direction:column;gap:8px;}
+.cfg-sec h3{font-size:10px;text-transform:uppercase;letter-spacing:.12em;opacity:.6;}
+input[type=text],input[type=number],select{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#f0ede6;padding:5px 8px;border-radius:3px;font-size:13px;}
+select option{background:var(--acc);}
+input::placeholder{color:rgba(255,255,255,.4);}
+.btn{padding:6px 14px;border:none;border-radius:3px;cursor:pointer;font-size:13px;}
+.btn-p{background:#f0ede6;color:var(--acc);font-weight:700;}
+.btn-s{background:rgba(255,255,255,.15);color:#f0ede6;border:1px solid rgba(255,255,255,.2);}
+.btn-d{background:rgba(255,80,80,.25);color:#ffc0c0;font-size:11px;padding:2px 7px;}
+.add-row{display:flex;gap:6px;align-items:center;}
+#h-name{width:120px;}
+#h-list{display:flex;flex-direction:column;gap:4px;max-height:130px;overflow-y:auto;}
+.h-item{display:flex;align-items:center;gap:5px;font-size:13px;padding:2px 0;}
+.h-item .hi{display:inline-flex;align-items:center;flex-shrink:0;width:16px;height:16px;}
+.h-item .hi svg{width:16px;height:16px;stroke:#f0ede6;}
+.h-item .hn{flex:1;}
+.actions{margin-left:auto;display:flex;flex-direction:column;gap:8px;}
+/* ── DAY PICKER ──────────────────── */
+.day-pick{display:flex;gap:3px;}
+.day-btn{width:20px;height:20px;border-radius:2px;border:1px solid rgba(255,255,255,.15);
+  background:rgba(255,255,255,.06);color:rgba(255,255,255,.4);font-size:7.5px;font-weight:700;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;padding:0;flex-shrink:0;}
+.day-btn.on{background:rgba(255,255,255,.28);color:#f0ede6;border-color:rgba(255,255,255,.4);}
+.h-days{display:flex;gap:2px;flex-shrink:0;}
+.h-day{width:10px;height:10px;border-radius:1px;font-size:5px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;}
+.h-day.on{background:rgba(255,255,255,.28);color:#f0ede6;}
+.h-day.off{background:rgba(255,255,255,.06);color:rgba(255,255,255,.25);}
+
+/* ── ICON PICKER ─────────────────── */
+.icon-picker-wrap{position:relative;}
+#h-icon-btn{padding:5px 8px;min-width:36px;display:flex;align-items:center;justify-content:center;}
+#h-icon-btn svg{width:16px;height:16px;stroke:#f0ede6;}
+#icon-picker-panel{display:none;position:absolute;top:calc(100% + 4px);left:0;z-index:300;
+  background:#2a2240;border:1px solid rgba(255,255,255,.25);border-radius:4px;padding:8px;
+  grid-template-columns:repeat(6,1fr);gap:4px;width:200px;}
+#icon-picker-panel.open{display:grid;}
+.icon-opt{padding:5px;background:rgba(255,255,255,.1);border:1px solid transparent;border-radius:3px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.icon-opt:hover{background:rgba(255,255,255,.25);}
+.icon-opt.selected{border-color:rgba(255,255,255,.5);background:rgba(255,255,255,.2);}
+.icon-opt svg{width:14px;height:14px;stroke:#f0ede6;}
+
+/* ── PREVIEW ─────────────────────── */
+#preview{padding:20px 24px;overflow-x:auto;}
+#preview-hdr{font-size:11px;text-transform:uppercase;letter-spacing:.1em;color:var(--dim);margin-bottom:16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;}
+.tip{opacity:.5;font-size:10px;text-transform:none;letter-spacing:0;}
+
+/* ── A4 SHEET ────────────────────── */
+#print-area{display:flex;flex-direction:column;gap:24px;align-items:flex-start;}
+.sheet{background:white;width:297mm;height:210mm;position:relative;box-shadow:0 0 10px rgba(0,0,0,.1);flex-shrink:0;overflow:visible;}
+.sheet.flip-back{transform:rotate(180deg);}
+.spread-container{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);display:flex;width:178mm;height:124mm;outline:.1mm solid #ddd;}
+.fold-line{position:absolute;left:148.5mm;top:0;bottom:0;border-left:.3mm dashed #bbb;z-index:10;pointer-events:none;}
+.crop-mark{position:absolute;background:#000;}
+.v-mark{width:.4mm;height:8mm;}
+.h-mark{width:8mm;height:.4mm;}
+.sheet-label{position:absolute;top:8mm;left:10mm;font-size:11px;color:#aaa;font-family:monospace;}
+
+/* ── TN PAGE (89×124mm) ──────────── */
+.pg{width:89mm;height:124mm;padding:6mm 7mm;box-sizing:border-box;position:relative;overflow:hidden;background-color:white;}
+.pg.fcol{display:flex;flex-direction:column;}
+
+/* ── SHARED ──────────────────────── */
+.sh{font-size:6pt;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#7a7870;padding-bottom:1.5mm;border-bottom:.3pt solid #ddd9d3;margin-bottom:2mm;flex-shrink:0;}
+.dotted{background-image:radial-gradient(circle,#c5c2bb 1px,transparent 1px);background-size:5mm 5mm;background-position:2.5mm 2.5mm;}
+.d-sep{border:none;border-top:.3pt solid #ddd9d3;margin:1.5mm 0;flex-shrink:0;}
+.d-fill{flex:1;min-height:8mm;background-image:radial-gradient(circle,#c5c2bb 1px,transparent 1px);background-size:5mm 5mm;background-position:2.5mm 2.5mm;}
+
+/* ── WEEKLY TRACKER ──────────────── */
+.wk-hab-sec{flex-shrink:0;display:grid;grid-template-columns:1fr repeat(7,5mm);column-gap:.5mm;row-gap:1.5mm;margin-bottom:1.5mm;}
+.wk-dhc{display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:.3mm;}
+.wk-dhc .dl{font-size:4.5pt;font-weight:700;color:#1a1a2e;}
+.wk-dhc .dn{font-size:4pt;color:#7a7870;}
+.wk-dhc.pad{opacity:.2;}
+.wk-hab-name{font-size:5.5pt;min-width:0;overflow:hidden;display:flex;align-items:center;gap:1mm;align-self:center;}
+.wk-hab-name svg{width:3mm;height:3mm;stroke:#7a7870;flex-shrink:0;}
+.wk-hab-name span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.wk-hab-cell{width:5mm;height:5mm;border:.4pt solid #ddd9d3;align-self:center;}
+.wk-hab-cell.pad{opacity:.15;background:#ede9e2;}
+.wk-hab-cell.na{border:.4pt dashed #e0dcd6;background:none;}
+
+/* ── DAILY ───────────────────────── */
+.d-hdr{display:flex;justify-content:space-between;align-items:baseline;border-bottom:.3pt solid #ddd9d3;padding-bottom:1.5mm;margin-bottom:2mm;flex-shrink:0;}
+.d-dow{font-size:6pt;font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#7a7870;}
+.d-num{font-size:18pt;font-weight:700;color:#ddd9d3;line-height:1;}
+.d-msw{display:flex;align-items:center;gap:2mm;width:100%;margin-bottom:1.5mm;flex-shrink:0;}
+.d-faces{display:flex;justify-content:space-between;align-items:center;flex:2;}
+.d-faces svg{width:5mm;height:5mm;stroke:#7a7870;stroke-width:1.5;}
+.d-field{display:flex;align-items:baseline;gap:1mm;flex:1;}
+.d-field-lbl{font-size:4.5pt;color:#7a7870;text-transform:uppercase;white-space:nowrap;}
+.d-field-line{flex:1;min-width:0;border-bottom:.3pt solid #7a7870;height:2.5mm;}
+.d-hab-list{display:flex;flex-direction:column;gap:1.5mm;margin-bottom:1.5mm;flex-shrink:0;}
+.d-hab-row{display:flex;align-items:center;gap:1.5mm;}
+.d-box{width:5mm;height:5mm;border:.5pt solid #7a7870;flex-shrink:0;}
+.d-hab-icon{width:3.5mm;height:3.5mm;flex-shrink:0;display:inline-flex;}
+.d-hab-icon svg{width:3.5mm;height:3.5mm;stroke:#7a7870;stroke-width:1.5;}
+.d-hab-name{font-size:6pt;color:#1a1a2e;}
+.d-tline{flex:1;border-bottom:.3pt solid #ddd9d3;height:3mm;}
+
+/* ── GRAPHS ──────────────────────── */
+.gph-wrap{display:flex;flex-direction:row;gap:2mm;flex:1;width:100%;}
+.gph-item{display:flex;flex-direction:column;flex:1;min-width:0;}
+.gph-item svg{width:100%;height:100%;display:block;}
+
+/* ── PAGE PREVIEW ────────────────── */
+#page-preview{display:none;flex-wrap:wrap;gap:16px;padding-top:4px;}
+#page-preview .pg{box-shadow:2px 3px 10px rgba(0,0,0,.18);}
+
+/* ── PRINT ───────────────────────── */
+@media print{
+  #cfg,#preview-hdr,#page-preview{display:none!important;}
+  body{background:white;}
+  #preview{padding:0;background:none;}
+  #print-area{display:flex!important;flex-direction:column;gap:0;position:static;}
+  .sheet{box-shadow:none;page-break-after:always;break-after:page;margin:0;}
+  .fold-line{border-left:.3mm solid #666;}
+  .spread-container{outline:none;}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  @page{size:A4 landscape;margin:0;}
+}
+</style>
+</head>
+<body>
+
+<!-- ══ CONFIG ══ -->
+<div id="cfg">
+  <div class="cfg-sec">
+    <h3>Month / Year</h3>
+    <div style="display:flex;gap:6px;">
+      <select id="sel-m">
+        <option value="0">January</option><option value="1">February</option>
+        <option value="2">March</option><option value="3">April</option>
+        <option value="4">May</option><option value="5">June</option>
+        <option value="6">July</option><option value="7">August</option>
+        <option value="8">September</option><option value="9">October</option>
+        <option value="10">November</option><option value="11">December</option>
+      </select>
+      <input id="sel-y" type="number" value="2026" min="2020" max="2099" style="width:66px;">
+    </div>
+  </div>
+  <div class="cfg-sec">
+    <h3>Habits</h3>
+    <div class="add-row">
+      <div class="icon-picker-wrap">
+        <button id="h-icon-btn" class="btn btn-s" onclick="toggleIconPicker(event)" title="Choose icon">
+          <span data-lucide="star" style="width:16px;height:16px;display:block;"></span>
+        </button>
+        <div id="icon-picker-panel"></div>
+      </div>
+      <input id="h-name" type="text" placeholder="Habit name">
+      <button class="btn btn-s" onclick="addHabit()">+ Add</button>
+    </div>
+    <div class="day-pick" id="day-pick"></div>
+    <div id="h-list"></div>
+  </div>
+  <div class="cfg-sec">
+    <h3>Duplex Flip</h3>
+    <div style="display:flex;flex-direction:column;gap:6px;">
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+        <input type="radio" name="flip" id="flip-long" value="long" checked onchange="generate()">
+        Long edge
+      </label>
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;cursor:pointer;">
+        <input type="radio" name="flip" id="flip-short" value="short" onchange="generate()">
+        Short edge
+      </label>
+    </div>
+  </div>
+  <div class="cfg-sec actions">
+    <h3>Actions</h3>
+    <button class="btn btn-p" onclick="generate()">↻ Generate</button>
+    <button class="btn btn-s" id="view-btn" onclick="togglePreview()">⊞ Page Preview</button>
+    <button class="btn btn-s" onclick="window.print()">⎙ Print / PDF</button>
+  </div>
+</div>
+
+<!-- ══ PREVIEW ══ -->
+<div id="preview">
+  <div id="preview-hdr">
+    <strong id="pg-count">0</strong>
+    <span class="tip">A4 landscape · duplex · fold · staple spine · trim edges</span>
+  </div>
+  <div id="print-area"></div>
+  <div id="page-preview"></div>
+</div>
+
+<script>
+'use strict';
+
+let habits = [];
+let selectedIcon = 'star';
+let pickerBuilt = false;
+let selectedDays = [0,1,2,3,4,5,6]; // Mon–Sun, all on by default
+const STORAGE_KEY = 'tn-passport-gen';
+
+function saveState(){
+  try{localStorage.setItem(STORAGE_KEY,JSON.stringify({
+    habits, selectedIcon, selectedDays,
+    month:parseInt($('sel-m').value), year:parseInt($('sel-y').value),
+    flip:document.querySelector('input[name="flip"]:checked')?.value||'long'
+  }));}catch(e){}
+}
+function loadState(){
+  try{
+    const s=JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if(!s)return false;
+    if(s.habits)habits=s.habits;
+    if(s.selectedIcon)selectedIcon=s.selectedIcon;
+    if(s.selectedDays)selectedDays=s.selectedDays;
+    if(s.month!=null)$('sel-m').value=s.month;
+    if(s.year!=null)$('sel-y').value=s.year;
+    if(s.flip)document.getElementById('flip-'+s.flip).checked=true;
+    return true;
+  }catch(e){return false;}
+}
+const WDAY_PICK = ['M','T','W','T','F','S','S'];
+
+const HABIT_ICONS = [
+  'droplets','dumbbell','bike','brain','moon','sun',
+  'book-open','heart','activity','utensils','apple','coffee',
+  'pill','music','pencil','leaf','bed','zap',
+  'star','flame','timer','eye','footprints','target',
+  'shield','baby','cat','dog'
+];
+
+const MOOD_ICONS = ['frown','frown','meh','smile','laugh'];
+// distinct 5: angry=very bad, frown=bad, meh=ok, smile=good, laugh=great
+// Using 5 distinct Lucide face icons:
+const MOOD_ICONS5 = ['angry','frown','meh','smile','laugh'];
+
+const MONTHS   = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const DOW_FULL = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const WDAY_LBL = ['M','T','W','T','F','S','S'];
+
+const $ = id => document.getElementById(id);
+function el(t,c,x){const e=document.createElement(t);if(c)e.className=c;if(x!=null)e.textContent=x;return e;}
+function daysInMonth(y,m){return new Date(y,m+1,0).getDate();}
+function firstDow(y,m){return new Date(y,m,1).getDay();}
+function dow(y,m,d){return new Date(y,m,d).getDay();}
+
+function buildWeeks(y,m){
+  const days=daysInMonth(y,m);
+  const offset=(firstDow(y,m)+6)%7;
+  const flat=Array(offset).fill(0);
+  for(let d=1;d<=days;d++) flat.push(d);
+  while(flat.length%7) flat.push(0);
+  const weeks=[];
+  for(let i=0;i<flat.length;i+=7) weeks.push(flat.slice(i,i+7));
+  return weeks;
+}
+
+/* ── LUCIDE ICON ELEMENT ── */
+function lucideEl(name, w, h){
+  const s=document.createElement('span');
+  s.setAttribute('data-lucide', name);
+  s.style.cssText=`width:${w};height:${h};display:block;flex-shrink:0;`;
+  return s;
+}
+
+/* ── ICON PICKER ── */
+function buildIconPicker(){
+  if(pickerBuilt) return;
+  const panel=$('icon-picker-panel');
+  HABIT_ICONS.forEach(name=>{
+    const btn=document.createElement('button');
+    btn.className='icon-opt';
+    btn.title=name;
+    btn.appendChild(lucideEl(name,'14px','14px'));
+    btn.onclick=e=>{
+      e.stopPropagation();
+      selectHabitIcon(name);
+    };
+    panel.appendChild(btn);
+  });
+  lucide.createIcons();
+  pickerBuilt=true;
+}
+
+function toggleIconPicker(e){
+  e.stopPropagation();
+  buildIconPicker();
+  const panel=$('icon-picker-panel');
+  panel.classList.toggle('open');
+}
+
+function selectHabitIcon(name){
+  selectedIcon=name;saveState();
+  const btn=$('h-icon-btn');
+  btn.innerHTML='';
+  btn.appendChild(lucideEl(name,'16px','16px'));
+  lucide.createIcons();
+  // highlight selected
+  $('icon-picker-panel').querySelectorAll('.icon-opt').forEach(b=>{
+    b.classList.toggle('selected', b.title===name);
+  });
+  $('icon-picker-panel').classList.remove('open');
+}
+
+document.addEventListener('click',()=>{
+  const p=$('icon-picker-panel');
+  if(p) p.classList.remove('open');
+});
+
+function buildGraphSVG(days, title){
+  // Vertical graph: day 1 at bottom → day N at top
+  // rowH scales to fill ~104mm available (112mm content - 8mm header/gap)
+  // Layout: [titleW | plotW | lblW] — title on left (anchored bottom), labels on right
+  const titleW=4, plotW=28, lblW=4, W=titleW+plotW+lblW;
+  const plotX=titleW; // plot starts right after title zone
+  const nCols=plotW, colW=1; // 1mm per column
+  const rowH=+((104/days)).toFixed(3), H=+(days*rowH).toFixed(2);
+
+  let s=`<svg width="100%" viewBox="0 0 ${W} ${H}">`;
+
+  // Rotated title — CCW along left margin, anchored at BOTTOM
+  const tc=+(titleW/2).toFixed(1);
+  s+=`<text transform="rotate(-90,${tc},${H})" x="${tc}" y="${H}"
+    text-anchor="start" dominant-baseline="middle"
+    font-size="3" font-weight="700" letter-spacing=".5"
+    fill="#7a7870">${title.toUpperCase()}</text>`;
+
+  // Vertical column lines
+  for(let c=0;c<=nCols;c++){
+    const x=+(plotX+c*colW).toFixed(2);
+    const isEdge=c===0||c===nCols;
+    s+=`<line x1="${x}" y1="0" x2="${x}" y2="${H}" stroke="${isEdge?'#aaa8a2':'#ddd9d3'}" stroke-width="${isEdge?'.4':'.2'}"/>`;
+  }
+
+  // Horizontal day rows + week separators + rotated day labels (right zone)
+  for(let d=1;d<=days;d++){
+    const y=+(H-d*rowH).toFixed(2);
+    const isWeekEnd=d%7===0;
+    s+=`<line x1="${plotX}" y1="${y}" x2="${plotX+plotW}" y2="${y}" stroke="${isWeekEnd?'#aca8a0':'#e0dcd6'}" stroke-width="${isWeekEnd?'.45':'.2'}" ${isWeekEnd?'stroke-dasharray="1.5,1"':''}/>`;
+
+    // Show 1, 7, 14, 21, 28; show last day only if >2 rows from 28
+    const showLast = d===days && days%7 > 2;
+    if(d===1 || d%7===0 || showLast){
+      const cy=+(H-(d-.5)*rowH).toFixed(2);
+      const lx=+(plotX+plotW+lblW/2).toFixed(1); // center of label zone (right of plot)
+      s+=`<text transform="rotate(-90,${lx},${cy})" x="${lx}" y="${cy}"
+        text-anchor="middle" dominant-baseline="middle"
+        font-size="3.5" fill="#7a7870">${d}</text>`;
+    }
+  }
+
+  // Borders
+  s+=`<line x1="${plotX}" y1="0" x2="${plotX+plotW}" y2="0" stroke="#aaa8a2" stroke-width=".4"/>`;
+  s+=`<line x1="${plotX}" y1="${H}" x2="${plotX+plotW}" y2="${H}" stroke="#aaa8a2" stroke-width=".4"/>`;
+
+  s+=`</svg>`;
+  return s;
+}
+
+/* ── DAY PICKER ── */
+function buildDayPick(){
+  const row=$('day-pick');row.innerHTML='';
+  WDAY_PICK.forEach((lbl,i)=>{
+    const b=el('button','day-btn'+(selectedDays.includes(i)?' on':''),lbl);
+    b.type='button';
+    b.onclick=e=>{
+      e.stopPropagation();
+      if(selectedDays.includes(i)){
+        if(selectedDays.length>1) selectedDays=selectedDays.filter(d=>d!==i);
+      } else {
+        selectedDays=[...selectedDays,i].sort((a,b)=>a-b);
+      }
+      buildDayPick();saveState();
+    };
+    row.appendChild(b);
+  });
+}
+
+/* ── HABIT UI ── */
+function addHabit(){
+  const name=$('h-name').value.trim();
+  if(!name)return;
+  habits.push({icon:selectedIcon,name,days:[...selectedDays],id:Date.now()});
+  $('h-name').value='';
+  renderHabits();saveState();
+}
+function removeHabit(id){habits=habits.filter(h=>h.id!==id);renderHabits();saveState();}
+function toggleHabitDay(id,dayIdx){
+  const h=habits.find(h=>h.id===id);if(!h)return;
+  if(h.days.includes(dayIdx)){
+    if(h.days.length>1) h.days=h.days.filter(d=>d!==dayIdx);
+  } else {
+    h.days=[...h.days,dayIdx].sort((a,b)=>a-b);
+  }
+  renderHabits();saveState();
+}
+function renderHabits(){
+  const list=$('h-list');list.innerHTML='';
+  habits.forEach(h=>{
+    const item=el('div','h-item');
+    const hi=el('span','hi');
+    hi.appendChild(lucideEl(h.icon,'16px','16px'));
+    item.appendChild(hi);
+    item.appendChild(el('span','hn',h.name));
+    // Day toggles
+    const days=el('div','h-days');
+    WDAY_PICK.forEach((lbl,i)=>{
+      const d=el('span','h-day '+(h.days.includes(i)?'on':'off'),lbl);
+      d.onclick=()=>toggleHabitDay(h.id,i);
+      days.appendChild(d);
+    });
+    item.appendChild(days);
+    const btn=el('button','btn btn-d','×');btn.onclick=()=>removeHabit(h.id);
+    item.appendChild(btn);list.appendChild(item);
+  });
+  lucide.createIcons();
+}
+
+/* ── PAGE BUILDERS ── */
+function pg(lbl){const p=el('div','pg');p.dataset.lbl=lbl;return p;}
+
+function mkMonthNotes(y,m){
+  const p=pg('monthly·notes');p.classList.add('dotted');
+  const h=el('div','sh',`${MONTHS[m]} ${y} — Notes`);h.style.background='white';p.appendChild(h);
+  return p;
+}
+
+function mkMonthGraphs(y,m){
+  const p=pg('monthly·graphs');p.classList.add('fcol');
+  p.appendChild(el('div','sh',`${MONTHS[m]} ${y} — Weight & Steps`));
+  const days=daysInMonth(y,m);
+  const wrap=el('div','gph-wrap');
+  ['Weight','Steps'].forEach(title=>{
+    const item=el('div','gph-item');
+    item.insertAdjacentHTML('beforeend',buildGraphSVG(days,title));
+    wrap.appendChild(item);
+  });
+  p.appendChild(wrap);
+  return p;
+}
+
+function mkWeekSummary(y,m,wn,wdays){
+  const p=pg(`wk${wn}`);p.classList.add('fcol');
+  const valid=wdays.filter(d=>d>0);
+  p.appendChild(el('div','sh',`Week ${wn} · ${MONTHS[m]} ${valid[0]}–${valid[valid.length-1]}`));
+
+  const sec=el('div','wk-hab-sec');
+  // Header row: empty top-left + 7 day header cells (flat grid items)
+  sec.appendChild(el('div',''));
+  wdays.forEach((d,i)=>{
+    const c=el('div',`wk-dhc${d===0?' pad':''}`);
+    c.innerHTML=`<span class="dl">${WDAY_LBL[i]}</span><span class="dn">${d>0?d:''}</span>`;
+    sec.appendChild(c);
+  });
+  // Habit rows: name + 7 cells each (flat grid items, auto-flows into rows of 8)
+  (habits.length>0?habits:[{icon:'star',name:'Add habits',days:[0,1,2,3,4,5,6]}]).forEach(h=>{
+    const nameCell=el('span','wk-hab-name');
+    nameCell.appendChild(lucideEl(h.icon,'3mm','3mm'));
+    nameCell.appendChild(el('span','',h.name));
+    sec.appendChild(nameCell);
+    wdays.forEach((d,i)=>{
+      const c=el('div','wk-hab-cell');
+      if(d===0) c.classList.add('pad');
+      else if(h.days&&!h.days.includes(i)) c.classList.add('na');
+      sec.appendChild(c);
+    });
+  });
+
+  p.appendChild(sec);
+  p.appendChild(el('hr','d-sep'));
+  p.appendChild(el('div','d-fill'));
+  return p;
+}
+
+function mkDay(y,m,d){
+  const p=pg(`${m+1}/${d}`);p.classList.add('fcol');
+  const w=dow(y,m,d);
+  const wdayIdx=(w+6)%7; // 0=Mon…6=Sun
+
+  const hdr=el('div','d-hdr');
+  hdr.appendChild(el('span','d-dow',DOW_FULL[w]));
+  hdr.appendChild(el('span','d-num',d));
+  p.appendChild(hdr);
+
+  const msw=el('div','d-msw');
+  const faces=el('div','d-faces');
+  MOOD_ICONS5.forEach(name=>{
+    faces.appendChild(lucideEl(name,'5mm','5mm'));
+  });
+  msw.appendChild(faces);
+  ['Steps','Wt'].forEach(lbl=>{
+    const f=el('div','d-field');
+    f.appendChild(el('span','d-field-lbl',lbl));
+    f.appendChild(el('div','d-field-line'));
+    msw.appendChild(f);
+  });
+  p.appendChild(msw);
+  p.appendChild(el('hr','d-sep'));
+
+  const habList=el('div','d-hab-list');
+  const todayHabits=habits.filter(h=>!h.days||h.days.includes(wdayIdx));
+  if(todayHabits.length===0){
+    for(let i=0;i<4;i++){
+      const row=el('div','d-hab-row');
+      row.appendChild(el('div','d-box'));
+      row.appendChild(el('div','d-tline'));
+      habList.appendChild(row);
+    }
+  } else {
+    todayHabits.forEach(h=>{
+      const row=el('div','d-hab-row');
+      row.appendChild(el('div','d-box'));
+      const ico=el('span','d-hab-icon');
+      ico.appendChild(lucideEl(h.icon,'3.5mm','3.5mm'));
+      row.appendChild(ico);
+      row.appendChild(el('span','d-hab-name',h.name));
+      habList.appendChild(row);
+    });
+  }
+  p.appendChild(habList);
+  p.appendChild(el('hr','d-sep'));
+  p.appendChild(el('div','d-fill'));
+  return p;
+}
+
+/* ── TOGGLE PREVIEW ── */
+let showPreview=false;
+function togglePreview(){
+  showPreview=!showPreview;
+  $('print-area').style.display=showPreview?'none':'';
+  $('page-preview').style.display=showPreview?'flex':'none';
+  $('view-btn').textContent=showPreview?'⊟ Print Layout':'⊞ Page Preview';
+}
+
+/* ── GENERATE + IMPOSE ── */
+function generate(){
+  saveState();
+  const m=parseInt($('sel-m').value);
+  const y=parseInt($('sel-y').value);
+
+  // Build all page DOM elements
+  const els=[];
+  els.push(mkMonthNotes(y,m));
+  els.push(mkMonthGraphs(y,m));
+  buildWeeks(y,m).forEach((wdays,wi)=>{
+    els.push(mkWeekSummary(y,m,wi+1,wdays));
+    wdays.forEach(d=>{if(d>0)els.push(mkDay(y,m,d));});
+  });
+
+  // Render all Lucide icons via temp DOM container
+  const tmp=document.createElement('div');
+  tmp.style.cssText='position:fixed;left:-9999px;top:-9999px;visibility:hidden;';
+  els.forEach(e=>tmp.appendChild(e));
+  document.body.appendChild(tmp);
+  lucide.createIcons();
+
+  // Populate page preview
+  const prev=$('page-preview');
+  prev.innerHTML='';
+  Array.from(tmp.children).forEach(e=>{
+    const c=e.cloneNode(true);
+    c.style.boxShadow='2px 3px 10px rgba(0,0,0,.18)';
+    prev.appendChild(c);
+  });
+
+  // Serialize (Lucide SVGs already rendered)
+  let pages=Array.from(tmp.children).map(e=>e.outerHTML);
+  document.body.removeChild(tmp);
+
+  // Pad to multiple of 4
+  while(pages.length%4!==0) pages.push('<div class="pg dotted"><div class="sh" style="background:white">Notes</div></div>');
+  const n=pages.length;
+
+  // Saddle-stitch imposition
+  const sides=[];
+  let L=0,R=n-1,sn=1;
+  while(L<R){
+    sides.push({l:pages[R],r:pages[L],lbl:`Sheet ${sn} Front (pp ${R+1} & ${L+1})`});
+    L++;R--;
+    if(L<R){
+      sides.push({l:pages[L],r:pages[R],lbl:`Sheet ${sn} Back (pp ${L+1} & ${R+1})`});
+      L++;R--;sn++;
+    }
+  }
+
+  // Read flip setting
+  const flipShort=document.querySelector('input[name="flip"]:checked')?.value==='short';
+
+  // Render A4 sheets
+  const container=$('print-area');
+  container.innerHTML='';
+  sides.forEach(s=>{
+    const div=document.createElement('div');
+    const isBack=s.lbl.includes('Back');
+    div.className='sheet'+(flipShort&&isBack?' flip-back':'');
+    div.innerHTML=`
+      <div class="sheet-label">${s.lbl}</div>
+      <div class="fold-line"></div>
+      <div class="spread-container">
+        ${s.l}${s.r}
+        <div class="crop-mark v-mark" style="top:-10mm;left:-.2mm;"></div>
+        <div class="crop-mark v-mark" style="top:-10mm;left:calc(89mm - .2mm);"></div>
+        <div class="crop-mark v-mark" style="top:-10mm;right:-.2mm;"></div>
+        <div class="crop-mark v-mark" style="bottom:-10mm;left:-.2mm;"></div>
+        <div class="crop-mark v-mark" style="bottom:-10mm;left:calc(89mm - .2mm);"></div>
+        <div class="crop-mark v-mark" style="bottom:-10mm;right:-.2mm;"></div>
+        <div class="crop-mark h-mark" style="left:-10mm;top:-.2mm;"></div>
+        <div class="crop-mark h-mark" style="left:-10mm;bottom:-.2mm;"></div>
+        <div class="crop-mark h-mark" style="right:-10mm;top:-.2mm;"></div>
+        <div class="crop-mark h-mark" style="right:-10mm;bottom:-.2mm;"></div>
+      </div>`;
+    container.appendChild(div);
+  });
+
+  $('pg-count').textContent=`${n} pages · ${sides.length} print sides (A4 duplex) · fold · staple spine · trim`;
+}
+
+/* ── INIT ── */
+const now=new Date();
+$('sel-m').value=now.getMonth();
+$('sel-y').value=now.getFullYear();
+if(!loadState()){
+  habits=[
+    {icon:'droplets',name:'Water',days:[0,1,2,3,4,5,6],id:1},
+    {icon:'dumbbell',name:'Exercise',days:[0,2,4],id:2},
+    {icon:'book-open',name:'Read',days:[0,1,2,3,4,5,6],id:3},
+    {icon:'brain',name:'Meditate',days:[0,1,2,3,4,5,6],id:4},
+  ];
+}
+renderHabits();
+buildDayPick();
+lucide.createIcons();
+$('sel-m').addEventListener('change',()=>generate());
+$('sel-y').addEventListener('change',()=>generate());
+$('h-name').addEventListener('keydown',e=>{if(e.key==='Enter')addHabit();});
+generate();
+</script>
+</body>
+</html>
