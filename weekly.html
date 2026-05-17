@@ -1722,73 +1722,76 @@ function mkHabitMap(y,m,c){
   const p=pg('habit-map',colors);
   p.classList.add('fcol');
   const days=daysInMonth(y,m);
-  const hdr=el('div','sh',`${MONTHS[m]} ${y} — Habit Map`);
+  const hdr=el('div','sh',`${MONTHS[m]} ${y} — Habit Tracker`);
   hdr.style.cssText=`color:${colors.dim};border-bottom:.3pt solid ${colors.line};`;
   p.appendChild(hdr);
 
   const habList=habits.length>0?habits:[{icon:'star',name:'Habit 1',days:[0,1,2,3,4,5,6]}];
-  const sz=tnSize();
-  const nameW=12;
+  const totalCols=Math.max(habList.length+3, 7);
+  const extraCols=totalCols-habList.length;
+  const dayColW=4;
+  const dowColW=3;
+  const wl=opts.weekstart==='sunday'?'SMTWTFS':'MTWTFSS';
 
   const tbl=el('div','');
-  tbl.style.cssText=`display:grid;grid-template-columns:${nameW}mm repeat(${days},1fr);gap:0;width:100%;margin-top:1mm;`;
+  tbl.style.cssText=`display:grid;grid-template-columns:${dayColW}mm ${dowColW}mm repeat(${totalCols},1fr);grid-template-rows:auto repeat(${days},1fr);gap:0;width:100%;flex:1;`;
 
+  // Header row: empty + empty + habit icons/names
   tbl.appendChild(el('div',''));
-  for(let d=1;d<=days;d++){
-    const dc=el('div','');
-    dc.style.cssText=`font-size:3pt;text-align:center;color:${colors.dim};padding-bottom:.3mm;line-height:1;`;
-    dc.textContent=d;
-    tbl.appendChild(dc);
-  }
+  tbl.appendChild(el('div',''));
+  habList.forEach(h=>{
+    const hc=el('div','');
+    hc.style.cssText=`display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:.3mm;padding:0 0 .8mm;overflow:hidden;`;
+    const ico=lucideEl(h.icon,'3mm','3mm');
+    ico.style.color=iconColor(h.icon,colors.dim);
+    hc.appendChild(ico);
+    const lbl=el('div','',h.name);
+    lbl.style.cssText=`font-size:3pt;color:${colors.dot};text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;`;
+    hc.appendChild(lbl);
+    tbl.appendChild(hc);
+  });
+  for(let i=0;i<extraCols;i++) tbl.appendChild(el('div',''));
 
-  const wl=opts.weekstart==='sunday'?'SMTWTFS':'MTWTFSS';
-  tbl.appendChild(el('div',''));
+  // Day rows
   for(let d=1;d<=days;d++){
     const dayDow=dow(y,m,d);
+    const isWe=(dayDow===0||dayDow===6);
     const idx=opts.weekstart==='sunday'?dayDow:(dayDow+6)%7;
-    const wc=el('div','');
-    wc.style.cssText=`font-size:2.5pt;text-align:center;color:${colors.dot};line-height:1;padding-bottom:.5mm;`;
-    wc.textContent=wl[idx];
-    tbl.appendChild(wc);
-  }
+    const isMon=(opts.weekstart==='sunday'?dayDow===0:dayDow===1);
 
-  habList.forEach(h=>{
-    const nm=el('div','');
-    nm.style.cssText=`font-size:4.5pt;color:${colors.dim};display:flex;align-items:center;gap:.5mm;overflow:hidden;white-space:nowrap;padding-right:.5mm;`;
-    const ico=lucideEl(h.icon,'2mm','2mm');
-    ico.style.color=iconColor(h.icon,colors.dim);
-    nm.appendChild(ico);
-    nm.appendChild(el('span','',h.name));
-    tbl.appendChild(nm);
+    // Day number
+    const dn=el('div','',d);
+    dn.style.cssText=`font-size:5pt;font-weight:700;color:${isWe?colors.dot:colors.dim};text-align:right;padding-right:.8mm;display:flex;align-items:center;justify-content:flex-end;${isMon&&d>1?`border-top:.3pt solid ${colors.line};`:''}`;
+    tbl.appendChild(dn);
 
-    for(let d=1;d<=days;d++){
-      const dayDow=dow(y,m,d);
+    // Day-of-week letter
+    const dl=el('div','',wl[idx]);
+    dl.style.cssText=`font-size:4pt;color:${colors.dot};display:flex;align-items:center;justify-content:center;${isMon&&d>1?`border-top:.3pt solid ${colors.line};`:''}`;
+    tbl.appendChild(dl);
+
+    // Habit cells
+    habList.forEach(h=>{
       const wdayIdx=opts.weekstart==='sunday'?dayDow:(dayDow+6)%7;
       const active=!h.days||h.days.includes(wdayIdx);
       const cell=el('div','');
       let cs=`border:.2pt solid ${colors.line};`;
-      if(!active) cs+=`background:${colors.bg};opacity:.25;`;
+      if(!active) cs=`border:.2pt dashed ${colors.line};opacity:.2;`;
+      else if(isWe) cs+=`background:${colors.bg};`;
+      if(isMon&&d>1) cs+=`border-top:.4pt solid ${colors.dim};`;
       cell.style.cssText=cs;
       tbl.appendChild(cell);
-    }
-  });
-
-  const extra=Math.max(3,10-habList.length);
-  for(let r=0;r<extra;r++){
-    const nm=el('div','');
-    nm.style.cssText=`border-bottom:.2pt dotted ${colors.line};`;
-    tbl.appendChild(nm);
-    for(let d=1;d<=days;d++){
+    });
+    for(let i=0;i<extraCols;i++){
       const cell=el('div','');
-      cell.style.cssText=`border:.2pt solid ${colors.line};`;
+      let cs=`border:.2pt solid ${colors.line};`;
+      if(isWe) cs+=`background:${colors.bg};`;
+      if(isMon&&d>1) cs+=`border-top:.4pt solid ${colors.dim};`;
+      cell.style.cssText=cs;
       tbl.appendChild(cell);
     }
   }
 
   p.appendChild(tbl);
-  const fill=el('div','d-fill');
-  fill.style.cssText=getFillStyle(colors);
-  p.appendChild(fill);
   return p;
 }
 
@@ -1886,16 +1889,15 @@ function mkMoodCalendar(y,m,c){
 
   const legend=el('div','');
   legend.style.cssText=`display:flex;justify-content:center;gap:3mm;padding:2mm 0 0;flex-shrink:0;`;
-  const moods=['\u{1F622}','\u{1F615}','\u{1F610}','\u{1F60A}','\u{1F604}'];
-  moods.forEach(emoji=>{
+  MOOD_ICONS5.forEach(name=>{
     const item=el('div','');
     item.style.cssText=`display:flex;flex-direction:column;align-items:center;gap:.5mm;`;
     const circ=el('div','');
     circ.style.cssText=`width:3mm;height:3mm;border-radius:50%;border:.3pt solid ${colors.line};`;
     item.appendChild(circ);
-    const lbl=el('div','',emoji);
-    lbl.style.cssText='font-size:5pt;';
-    item.appendChild(lbl);
+    const ico=lucideEl(name,'3.5mm','3.5mm');
+    ico.style.color=colors.dim;
+    item.appendChild(ico);
     legend.appendChild(item);
   });
   p.appendChild(legend);
