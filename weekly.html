@@ -109,7 +109,7 @@ input::placeholder{color:rgba(255,255,255,.4);}
 
 /* ── A4 SHEET ────────────────────── */
 #print-area{display:flex;flex-direction:column;gap:24px;align-items:flex-start;}
-.sheet{background:white;width:297mm;height:210mm;position:relative;box-shadow:0 0 10px rgba(0,0,0,.1);flex-shrink:0;overflow:visible;}
+.sheet{background:white;width:var(--sheet-w,297mm);height:var(--sheet-h,210mm);position:relative;box-shadow:0 0 10px rgba(0,0,0,.1);flex-shrink:0;overflow:visible;}
 .sheet.flip-back{transform:rotate(180deg);}
 .spread-container{position:absolute;top:var(--spread-top,43mm);left:var(--spread-left,59.5mm);display:flex;width:var(--spread-w,178mm);height:var(--tn-h,124mm);outline:.1mm solid #ddd;}
 .fold-line{position:absolute;left:var(--fold-x,148.5mm);top:0;bottom:0;border-left:.3mm dashed #bbb;z-index:10;pointer-events:none;}
@@ -214,7 +214,7 @@ input::placeholder{color:rgba(255,255,255,.4);}
   .book-spread .book-blank{width:50%!important;height:auto!important;aspect-ratio:var(--tn-aspect,89/124);}
   /* ── Print layout: scale spread to fit sheet ── */
   #print-area{align-items:center;gap:16px!important;}
-  .sheet{width:calc(100vw - 16px)!important;height:auto!important;aspect-ratio:297/210;overflow:hidden;display:flex!important;align-items:center!important;justify-content:center!important;}
+  .sheet{width:calc(100vw - 16px)!important;height:auto!important;aspect-ratio:var(--sheet-aspect,297/210);overflow:hidden;display:flex!important;align-items:center!important;justify-content:center!important;}
   .sheet-label{font-size:7px;top:2px!important;left:4px!important;z-index:2;}
   .fold-line{display:none;}
   .crop-mark{display:none;}
@@ -235,7 +235,7 @@ input::placeholder{color:rgba(255,255,255,.4);}
 }
 
 /* ── PRINT GUIDE ────────────── */
-.guide-sheet{background:white;width:297mm;height:210mm;position:relative;box-shadow:0 0 10px rgba(0,0,0,.1);flex-shrink:0;padding:12mm 16mm;font-family:'Helvetica','Arial',sans-serif;color:#222;}
+.guide-sheet{background:white;width:var(--sheet-w,297mm);height:var(--sheet-h,210mm);position:relative;box-shadow:0 0 10px rgba(0,0,0,.1);flex-shrink:0;padding:12mm 16mm;font-family:'Helvetica','Arial',sans-serif;color:#222;}
 .guide-title{font-size:16pt;font-weight:700;margin-bottom:2mm;color:#1a1a2e;}
 .guide-sub{font-size:8pt;color:#888;margin-bottom:8mm;}
 .guide-steps{display:grid;grid-template-columns:1fr 1fr;gap:6mm;height:calc(100% - 20mm);}
@@ -636,6 +636,15 @@ input::placeholder{color:rgba(255,255,255,.4);}
       <div class="coll-body">
         <div class="cfg-sec">
           <div class="cfg-row">
+            <label>Paper size</label>
+            <select id="opt-papersize" onchange="onOptionChange()" style="flex:1;">
+              <option value="a4">A4 (297&#215;210mm)</option>
+              <option value="letter">US Letter (279&#215;216mm)</option>
+              <option value="legal">US Legal (356&#215;216mm)</option>
+              <option value="a3">A3 (420&#215;297mm)</option>
+            </select>
+          </div>
+          <div class="cfg-row">
             <label>Notebook size</label>
             <select id="opt-tnsize" onchange="onOptionChange()" style="flex:1;">
               <option value="passport">Passport (89&#215;124mm)</option>
@@ -643,7 +652,14 @@ input::placeholder{color:rgba(255,255,255,.4);}
               <option value="personal">Personal (95&#215;171mm)</option>
               <option value="a5slim">A5 Slim (105&#215;210mm)</option>
               <option value="regular">Regular (110&#215;210mm)</option>
+              <option value="custom">Custom...</option>
             </select>
+          </div>
+          <div class="cfg-row" id="custom-tn-row" style="display:none;gap:4px;">
+            <label>W&#215;H (mm)</label>
+            <input type="number" id="opt-custom-tn-w" value="89" min="40" max="200" style="width:60px;" onchange="onOptionChange()">
+            <span style="opacity:.5;">&#215;</span>
+            <input type="number" id="opt-custom-tn-h" value="124" min="60" max="300" style="width:60px;" onchange="onOptionChange()">
           </div>
           <div style="margin-top:6px;border-top:1px solid rgba(255,255,255,.08);padding-top:6px;">
             <div class="toggle-row">
@@ -700,7 +716,7 @@ input::placeholder{color:rgba(255,255,255,.4);}
 <div id="preview">
   <div id="preview-hdr">
     <strong id="pg-count">0</strong>
-    <span class="tip">A4 landscape &middot; duplex &middot; fold &middot; staple spine &middot; trim edges</span>
+    <span class="tip" id="paper-tip">A4 landscape &middot; duplex &middot; fold &middot; staple spine &middot; trim edges</span>
   </div>
   <div id="print-area"></div>
   <div id="page-preview"></div>
@@ -748,6 +764,9 @@ let dailyFields = [{id:1,label:'Steps'},{id:2,label:'Wt'}];
 /* ── Options defaults ─�� */
 let opts = {
   tnsize: 'passport',
+  paperSize: 'a4',
+  customTnW: 89,
+  customTnH: 124,
   theme: 'Classic Warm',
   colors: {},
   font: 'Georgia',
@@ -800,6 +819,13 @@ const TN_SIZES = {
   'personal':  { label:'Personal',    w:95,  h:171 },
   'a5slim':    { label:'A5 Slim',     w:105, h:210 },
   'regular':   { label:'Regular',     w:110, h:210 },
+};
+
+const PAPER_SIZES = {
+  'a4':     { label:'A4',        w:297,   h:210,   page:'A4 landscape' },
+  'letter': { label:'US Letter', w:279.4, h:215.9, page:'letter landscape' },
+  'legal':  { label:'US Legal',  w:355.6, h:215.9, page:'legal landscape' },
+  'a3':     { label:'A3',        w:420,   h:297,   page:'A3 landscape' },
 };
 
 const ICON_COLORS = {
@@ -994,6 +1020,10 @@ function loadState(){
 
 function applyOptsToUI(){
   $('opt-tnsize').value=opts.tnsize;
+  $('opt-papersize').value=opts.paperSize;
+  $('opt-custom-tn-w').value=opts.customTnW;
+  $('opt-custom-tn-h').value=opts.customTnH;
+  $('custom-tn-row').style.display=opts.tnsize==='custom'?'flex':'none';
   $('opt-font').value=opts.font;
   $('opt-margin').value=opts.margin;
   $('opt-checkbox').value=opts.checkbox;
@@ -1038,6 +1068,10 @@ function applyOptsToUI(){
 
 function readOptsFromUI(){
   opts.tnsize=$('opt-tnsize').value;
+  opts.paperSize=$('opt-papersize').value;
+  opts.customTnW=parseInt($('opt-custom-tn-w').value)||89;
+  opts.customTnH=parseInt($('opt-custom-tn-h').value)||124;
+  $('custom-tn-row').style.display=opts.tnsize==='custom'?'flex':'none';
   opts.font=$('opt-font').value;
   opts.margin=parseInt($('opt-margin').value);
   opts.checkbox=$('opt-checkbox').value;
@@ -1316,7 +1350,11 @@ function getFillStyle(c){
   }
 }
 
-function tnSize(){ return TN_SIZES[opts.tnsize]||TN_SIZES.passport; }
+function tnSize(){
+  if(opts.tnsize==='custom') return {label:'Custom',w:opts.customTnW||89,h:opts.customTnH||124};
+  return TN_SIZES[opts.tnsize]||TN_SIZES.passport;
+}
+function getPaperSize(){ return PAPER_SIZES[opts.paperSize]||PAPER_SIZES.a4; }
 function activeFont(){ return opts.customFont.trim()||opts.font||'Georgia'; }
 function coverAccent(){ return COVER_ACCENTS[opts.coverAccent]||COVER_ACCENTS.gold; }
 
@@ -2319,15 +2357,23 @@ function generate(){
   const root=document.documentElement;
   COLOR_VARS.forEach(k=>root.style.setProperty('--'+k,colors[k]));
   const sz=tnSize();
+  const paper=getPaperSize();
   root.style.setProperty('--tn-w',sz.w+'mm');
   root.style.setProperty('--tn-h',sz.h+'mm');
   root.style.setProperty('--tn-aspect',sz.w+'/'+sz.h);
   root.style.setProperty('--spread-w',(sz.w*2)+'mm');
-  const spreadTop=+((210 - sz.h)/2).toFixed(2);
-  const spreadLeft=+((297 - sz.w*2)/2).toFixed(2);
+  root.style.setProperty('--sheet-w',paper.w+'mm');
+  root.style.setProperty('--sheet-h',paper.h+'mm');
+  root.style.setProperty('--sheet-aspect',paper.w+'/'+paper.h);
+  const spreadTop=+((paper.h - sz.h)/2).toFixed(2);
+  const spreadLeft=+((paper.w - sz.w*2)/2).toFixed(2);
   root.style.setProperty('--spread-top', spreadTop+'mm');
   root.style.setProperty('--spread-left', spreadLeft+'mm');
-  root.style.setProperty('--fold-x',((297/2))+'mm');
+  root.style.setProperty('--fold-x',(paper.w/2)+'mm');
+  let ps=document.getElementById('dynamic-page-style');
+  if(!ps){ps=document.createElement('style');ps.id='dynamic-page-style';document.head.appendChild(ps);}
+  ps.textContent='@page{size:'+paper.page+';margin:0;}';
+  $('paper-tip').textContent=paper.label+' landscape · duplex · fold · staple spine · trim edges';
   document.body.style.fontFamily=`'${activeFont()}',serif`;
 
   const els=[];
