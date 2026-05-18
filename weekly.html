@@ -21,7 +21,7 @@ button,input,select{font-family:inherit;}
 body{font-family:'Georgia',serif;background:var(--bg);color:var(--ink);display:flex;height:100vh;overflow:hidden;}
 
 /* ── SIDEBAR CONFIG ──��──────────────── */
-#cfg{background:var(--acc);color:#f0ede6;border-right:3px solid #2a2240;width:300px;min-width:280px;height:100vh;overflow-y:auto;padding:14px 16px 18px;display:flex;flex-direction:column;gap:4px;flex-shrink:0;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.2) transparent;}
+#cfg{background:var(--acc);color:#f0ede6;border-right:3px solid #2a2240;width:300px;min-width:280px;height:calc(100vh - 32px);overflow-y:auto;padding:14px 16px 18px;display:flex;flex-direction:column;gap:4px;flex-shrink:0;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.2) transparent;}
 #cfg::-webkit-scrollbar{width:6px;}
 #cfg::-webkit-scrollbar-track{background:transparent;}
 #cfg::-webkit-scrollbar-thumb{background:rgba(255,255,255,.2);border-radius:3px;}
@@ -193,26 +193,32 @@ input::placeholder{color:rgba(255,255,255,.4);}
 .book-spread .book-blank{background:#f8f8f8;display:flex;align-items:center;justify-content:center;color:#ccc;font-size:10pt;}
 
 /* ── MOBILE ─────────────────────── */
-#menu-toggle{display:none;}
+/* ── TOP NAV ── */
+#top-nav{position:fixed;top:0;left:0;right:0;z-index:600;display:flex;gap:8px;padding:5px 12px;background:#16132a;font-size:11px;align-items:center;border-bottom:1px solid #4a4570;height:32px;}
+#top-nav strong{color:#e8e4f0;margin-right:6px;}
+#top-nav a{color:#9a94b0;text-decoration:none;padding:2px 8px;border-radius:3px;transition:background .15s;}
+#top-nav a:hover{background:rgba(255,255,255,.08);color:#e8e4f0;}
+#top-nav a.active{background:rgba(124,111,192,.2);color:#9b8de0;}
+#top-nav #menu-toggle{display:none;margin-left:auto;background:none;border:none;color:#e8e4f0;font-size:18px;cursor:pointer;padding:2px 6px;}
+body{padding-top:32px;}
 #menu-backdrop{display:none;position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,.4);z-index:350;}
 
 @media (max-width:768px){
   body{flex-direction:column;height:auto;overflow:auto;}
-  #menu-toggle{display:flex;align-items:center;justify-content:center;position:fixed;top:10px;left:10px;z-index:500;width:44px;height:44px;border-radius:10px;border:none;background:var(--acc);color:#f0ede6;font-size:22px;cursor:pointer;box-shadow:0 2px 10px rgba(0,0,0,.35);}
-  #cfg{position:fixed;top:0;left:0;width:88vw;max-width:340px;height:100vh;z-index:400;transform:translateX(-100%);transition:transform .3s cubic-bezier(.4,0,.2,1);overflow-y:auto;padding-top:56px;}
+  #top-nav #menu-toggle{display:flex;align-items:center;justify-content:center;}
+  #top-nav a:not(.active){display:none;}
+  #cfg{position:fixed;top:32px;left:0;width:88vw;max-width:340px;height:calc(100vh - 32px);z-index:400;transform:translateX(-100%);transition:transform .3s cubic-bezier(.4,0,.2,1);overflow-y:auto;padding-top:12px;}
   #cfg.open{transform:translateX(0);}
-  #preview{width:100%;height:auto;overflow-x:hidden;padding:60px 8px 16px;}
+  #preview{width:100%;height:auto;overflow-x:hidden;padding:12px 8px 16px;}
   #preview-hdr{padding:0 4px;font-size:9px;gap:4px;}
   #preview-hdr strong{font-size:8px;line-height:1.3;}
   #page-preview{gap:10px;justify-content:center;}
   #page-preview .pg{width:calc(100vw - 20px)!important;height:auto!important;aspect-ratio:var(--tn-aspect,89/124);}
-  /* ── Book view: side-by-side half-width spreads ── */
   #book-view{gap:16px!important;}
   .book-spread{flex-direction:row!important;gap:0!important;box-shadow:0 2px 12px rgba(0,0,0,.15)!important;border-radius:3px;overflow:hidden;width:calc(100vw - 20px);margin:0 auto;}
   .book-spread .pg{width:50%!important;height:auto!important;aspect-ratio:var(--tn-aspect,89/124);box-shadow:none!important;}
   .book-spread .pg:first-child{border-right:.5px solid #ddd;}
   .book-spread .book-blank{width:50%!important;height:auto!important;aspect-ratio:var(--tn-aspect,89/124);}
-  /* ── Print layout: scale spread to fit sheet ── */
   #print-area{align-items:center;gap:16px!important;}
   .sheet{width:calc(100vw - 16px)!important;height:auto!important;aspect-ratio:var(--sheet-aspect,297/210);overflow:hidden;display:flex!important;align-items:center!important;justify-content:center!important;}
   .sheet-label{font-size:7px;top:2px!important;left:4px!important;z-index:2;}
@@ -223,7 +229,8 @@ input::placeholder{color:rgba(255,255,255,.4);}
 
 /* ── PRINT ───────────────────────── */
 @media print{
-  #cfg,#preview-hdr,#page-preview,#book-view,#menu-toggle,#menu-backdrop{display:none!important;}
+  #top-nav,#cfg,#preview-hdr,#page-preview,#book-view,#menu-backdrop{display:none!important;}
+  body{padding-top:0!important;}
   body{background:white;display:block;height:auto;overflow:visible;}
   #preview{padding:0;background:none;height:auto;overflow:visible;}
   #print-area{display:flex!important;flex-direction:column;gap:0;position:static;}
@@ -260,7 +267,13 @@ input::placeholder{color:rgba(255,255,255,.4);}
 </style>
 </head>
 <body>
-<button id="menu-toggle" onclick="toggleMenu()">&#9776;</button>
+<nav id="top-nav">
+  <strong>TN Tools</strong>
+  <a href="weekly.html" class="active">📅 Planner</a>
+  <a href="editor.html">✏️ Layout Editor</a>
+  <a href="gym.html">🏋️ Gym Log</a>
+  <button id="menu-toggle" onclick="toggleMenu()">☰</button>
+</nav>
 <div id="menu-backdrop" onclick="toggleMenu()"></div>
 
 <!-- ══ CONFIG ══ -->
@@ -874,6 +887,288 @@ function getColors(){
   const merged = {...base};
   COLOR_VARS.forEach(k=>{ if(opts.colors[k]) merged[k]=opts.colors[k]; });
   return merged;
+}
+
+/* ── Utility helpers ── */
+function getWeekNumber(d){
+  const t = new Date(d.getFullYear(), 0, 1);
+  return Math.ceil(((d - t) / 86400000 + t.getDay() + 1) / 7);
+}
+
+/* ── Moon phase helpers ── */
+function getMoonPhase(year, month, day){
+  const d = new Date(year, month, day);
+  const ref = new Date(2000, 0, 6, 18, 14);
+  const diff = (d - ref) / 86400000;
+  const cycle = 29.53058770576;
+  const age = ((diff % cycle) + cycle) % cycle;
+  return Math.round(age / cycle * 8) % 8;
+}
+function moonSVG(phase, size, color){
+  const s = size || '3.5mm';
+  const c = color || 'currentColor';
+  const r = 6, cx = 7, cy = 7;
+  switch(phase){
+    case 0: return `<svg width="${s}" height="${s}" viewBox="0 0 14 14"><circle cx="${cx}" cy="${cy}" r="${r}" fill="${c}"/></svg>`;
+    case 4: return `<svg width="${s}" height="${s}" viewBox="0 0 14 14"><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${c}" stroke-width="1"/></svg>`;
+    case 2: {const p=`M${cx},${cy-r} A${r},${r} 0 0,1 ${cx},${cy+r} L${cx},${cy-r}Z`; return `<svg width="${s}" height="${s}" viewBox="0 0 14 14"><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${c}" stroke-width="1"/><path d="${p}" fill="${c}"/></svg>`;}
+    case 6: {const p=`M${cx},${cy-r} A${r},${r} 0 0,0 ${cx},${cy+r} L${cx},${cy-r}Z`; return `<svg width="${s}" height="${s}" viewBox="0 0 14 14"><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${c}" stroke-width="1"/><path d="${p}" fill="${c}"/></svg>`;}
+    case 1: return `<svg width="${s}" height="${s}" viewBox="0 0 14 14"><circle cx="${cx}" cy="${cy}" r="${r}" fill="${c}"/><path d="M${cx},${cy-r} A${r},${r} 0 0,1 ${cx},${cy+r} A${r*0.5},${r} 0 0,0 ${cx},${cy-r}Z" fill="white"/></svg>`;
+    case 3: return `<svg width="${s}" height="${s}" viewBox="0 0 14 14"><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${c}" stroke-width="1"/><path d="M${cx},${cy-r} A${r},${r} 0 0,0 ${cx},${cy+r} A${r*0.5},${r} 0 0,0 ${cx},${cy-r}Z" fill="${c}"/></svg>`;
+    case 5: return `<svg width="${s}" height="${s}" viewBox="0 0 14 14"><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${c}" stroke-width="1"/><path d="M${cx},${cy-r} A${r},${r} 0 0,1 ${cx},${cy+r} A${r*0.5},${r} 0 0,1 ${cx},${cy-r}Z" fill="${c}"/></svg>`;
+    case 7: return `<svg width="${s}" height="${s}" viewBox="0 0 14 14"><circle cx="${cx}" cy="${cy}" r="${r}" fill="${c}"/><path d="M${cx},${cy-r} A${r},${r} 0 0,0 ${cx},${cy+r} A${r*0.5},${r} 0 0,1 ${cx},${cy-r}Z" fill="white"/></svg>`;
+  }
+  return '';
+}
+
+/* ── Layout-aware page renderer ── */
+function getLayout(pageType){
+  return opts.elemLayouts && opts.elemLayouts[pageType] ? opts.elemLayouts[pageType] : null;
+}
+function renderLayoutBlock(block, innerW, innerH, colors, data){
+  const wrapper = document.createElement('div');
+  const x_mm = block.x * innerW / 100;
+  const y_mm = block.y * innerH / 100;
+  const w_mm = block.w * innerW / 100;
+  const h_mm = block.h * innerH / 100;
+  wrapper.style.cssText = `position:absolute;left:${x_mm.toFixed(2)}mm;top:${y_mm.toFixed(2)}mm;width:${w_mm.toFixed(2)}mm;height:${h_mm.toFixed(2)}mm;overflow:hidden;${block.rotation?'transform:rotate('+block.rotation+'deg);':''}`;
+  if(block.font) wrapper.style.fontFamily = `'${block.font}',serif`;
+  const eColor = block.color || null;
+  const cbSize = opts.cbsize || 5;
+
+  // built-in element IDs
+  switch(block.id){
+    case 'dayName':
+      wrapper.style.cssText += `font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:${eColor||colors.dim};display:flex;align-items:center;font-size:${block.fs||6}pt;`;
+      wrapper.textContent = data.dayName || '';
+      return wrapper;
+    case 'dayNum':
+      wrapper.style.cssText += `font-weight:700;color:${eColor||colors.line};line-height:1;display:flex;align-items:center;justify-content:flex-end;font-size:${block.fs||18}pt;`;
+      wrapper.textContent = data.dayNum || '';
+      return wrapper;
+    case 'header': {
+      const titles = {'weekly':`Week ${data.weekNum||''} · ${MONTHS[data.month||0]}`,'goals':`${MONTHS[data.month||0]} ${data.year||''} — Goals`,'habit-map':`${MONTHS[data.month||0]} ${data.year||''} — Habit Tracker`,'mood-cal':`${MONTHS[data.month||0]} ${data.year||''} — Mood`,'expenses':`${MONTHS[data.month||0]} ${data.year||''} — Expenses`};
+      wrapper.style.cssText += `font-weight:700;color:${eColor||colors.dim};display:flex;align-items:center;font-size:${block.fs||6}pt;border-bottom:.3pt solid ${colors.line};`;
+      wrapper.textContent = data.headerTitle || titles[data.pageType||''] || block.label || '';
+      return wrapper;
+    }
+    case 'moon':
+      wrapper.style.cssText += `display:flex;align-items:center;justify-content:center;`;
+      if(data.year!=null) wrapper.innerHTML = moonSVG(getMoonPhase(data.year, data.month, data.day), Math.min(w_mm,h_mm).toFixed(1)+'mm', eColor||colors.dim);
+      return wrapper;
+    case 'headerLine':
+      wrapper.style.cssText += `border-bottom:.3pt solid ${eColor||colors.line};`;
+      return wrapper;
+    case 'moodFaces': {
+      wrapper.style.cssText += `display:flex;justify-content:space-between;align-items:center;`;
+      const icons = opts.moodfaces===3 ? MOOD_ICONS3 : MOOD_ICONS5;
+      const icoSz = Math.min(w_mm/icons.length, h_mm).toFixed(1);
+      icons.forEach(name => {
+        const sp = document.createElement('span');
+        sp.setAttribute('data-lucide', name);
+        sp.style.cssText = `width:${icoSz}mm;height:${icoSz}mm;display:block;color:${eColor||colors.dim};`;
+        wrapper.appendChild(sp);
+      });
+      return wrapper;
+    }
+    case 'dailyFields': {
+      wrapper.style.cssText += `display:flex;align-items:center;gap:2mm;`;
+      const fields = dailyFields.length ? dailyFields : [{label:'Steps'},{label:'Wt'}];
+      fields.forEach(f => {
+        const fd = el('div','');
+        fd.style.cssText = `display:flex;align-items:baseline;gap:1mm;flex:1;`;
+        const lb = el('span','',f.label);
+        lb.style.cssText = `font-size:${block.fs||4.5}pt;text-transform:uppercase;white-space:nowrap;color:${eColor||colors.dim};`;
+        fd.appendChild(lb);
+        const ln = el('div','');
+        ln.style.cssText = `flex:1;border-bottom:.3pt solid ${eColor||colors.dim};height:2.5mm;`;
+        fd.appendChild(ln);
+        wrapper.appendChild(fd);
+      });
+      return wrapper;
+    }
+    case 'sep1': case 'sep2': case 'sep':
+      wrapper.style.cssText += `border-top:.3pt ${opts.linestyle||'solid'} ${eColor||colors.line};`;
+      return wrapper;
+    case 'habits': {
+      const rowH_mm = cbSize + 1.5;
+      const maxRows = Math.max(1, Math.floor(h_mm / rowH_mm));
+      wrapper.style.cssText += `display:flex;flex-direction:column;gap:1.5mm;overflow:hidden;font-size:${block.fs||6}pt;color:${eColor||colors.ink};`;
+      const todayHabs = data.todayHabits || habits;
+      const habitsToShow = todayHabs.slice(0, maxRows);
+      habitsToShow.forEach(h => {
+        const row = el('div','');
+        row.style.cssText = `display:flex;align-items:center;gap:2mm;`;
+        const box = el('div','');
+        box.style.cssText = `border:.5pt solid ${colors.dim};${getCheckboxStyle(cbSize)}flex-shrink:0;`;
+        row.appendChild(box);
+        const ico = lucideEl(h.icon||'star','3.5mm','3.5mm');
+        ico.style.color = iconColor(h.icon,colors.dim);
+        row.appendChild(ico);
+        row.appendChild(el('span','',h.name));
+        wrapper.appendChild(row);
+      });
+      for(let i=0; i<Math.min(opts.emptyLines||0, maxRows-habitsToShow.length); i++){
+        const row = el('div','');
+        row.style.cssText = `display:flex;align-items:center;gap:2mm;`;
+        const box = el('div','');
+        box.style.cssText = `border:.5pt solid ${colors.dim};${getCheckboxStyle(cbSize)}flex-shrink:0;`;
+        row.appendChild(box);
+        const tline = el('div','');
+        tline.style.cssText = `flex:1;border-bottom:.3pt solid ${colors.line};height:${cbSize}mm;`;
+        row.appendChild(tline);
+        wrapper.appendChild(row);
+      }
+      return wrapper;
+    }
+    case 'notes':
+      wrapper.style.cssText += getFillStyle(colors);
+      return wrapper;
+    // weekly page
+    case 'tracker':
+      if(data.weekTracker) { wrapper.appendChild(data.weekTracker); wrapper.style.overflow='visible'; }
+      return wrapper;
+    case 'goals':
+      if(data.goalsList) { wrapper.appendChild(data.goalsList); wrapper.style.overflow='visible'; }
+      return wrapper;
+    case 'grid':
+      if(data.habitGrid) { wrapper.appendChild(data.habitGrid); wrapper.style.overflow='visible'; }
+      return wrapper;
+    case 'calendar':
+      if(data.moodCalGrid) { wrapper.appendChild(data.moodCalGrid); wrapper.style.overflow='visible'; }
+      return wrapper;
+    case 'legend':
+      if(data.moodLegend) { wrapper.appendChild(data.moodLegend); wrapper.style.overflow='visible'; }
+      return wrapper;
+    case 'table':
+      if(data.expenseTable) { wrapper.appendChild(data.expenseTable); wrapper.style.overflow='visible'; }
+      return wrapper;
+  }
+
+  // custom addable element types
+  switch(block.type){
+    case 'text':
+      wrapper.style.cssText += `display:flex;align-items:center;color:${eColor||colors.ink};font-size:${block.fs||6}pt;`;
+      wrapper.textContent = block.content || '';
+      return wrapper;
+    case 'separator':
+      wrapper.style.cssText += `border-top:.3pt ${block.lineStyle||'solid'} ${eColor||colors.line};`;
+      return wrapper;
+    case 'fill':
+      wrapper.style.cssText += getFillStyle(colors);
+      return wrapper;
+    case 'field': {
+      wrapper.style.cssText += `display:flex;align-items:baseline;gap:1mm;`;
+      const lb = el('span','',block.fieldLabel||'Label');
+      lb.style.cssText = `font-size:${block.fs||4.5}pt;text-transform:uppercase;color:${eColor||colors.dim};`;
+      wrapper.appendChild(lb);
+      const ln = el('div','');
+      ln.style.cssText = `flex:1;border-bottom:.3pt solid ${eColor||colors.dim};height:2.5mm;`;
+      wrapper.appendChild(ln);
+      return wrapper;
+    }
+    case 'checkbox': {
+      wrapper.style.cssText += `display:flex;align-items:center;gap:2mm;flex-wrap:wrap;`;
+      for(let i=0;i<(block.checkboxCount||1);i++){
+        const box = el('div','');
+        box.style.cssText = `border:.5pt solid ${eColor||colors.dim};${getCheckboxStyle(cbSize)}flex-shrink:0;`;
+        wrapper.appendChild(box);
+      }
+      return wrapper;
+    }
+    case 'icon': {
+      const icoSz = Math.min(w_mm,h_mm).toFixed(1);
+      wrapper.style.cssText += `display:flex;align-items:center;justify-content:center;`;
+      const sp = document.createElement('span');
+      sp.setAttribute('data-lucide', block.icon||'star');
+      sp.style.cssText = `width:${icoSz}mm;height:${icoSz}mm;display:block;color:${ICON_COLORS[block.icon]||eColor||colors.dim};`;
+      wrapper.appendChild(sp);
+      return wrapper;
+    }
+    case 'mood': {
+      const icons = opts.moodfaces===3 ? MOOD_ICONS3 : MOOD_ICONS5;
+      const icoSz = Math.min(w_mm/icons.length, h_mm).toFixed(1);
+      wrapper.style.cssText += `display:flex;justify-content:space-between;align-items:center;`;
+      icons.forEach(name => {
+        const sp = document.createElement('span');
+        sp.setAttribute('data-lucide', name);
+        sp.style.cssText = `width:${icoSz}mm;height:${icoSz}mm;display:block;color:${eColor||colors.dim};`;
+        wrapper.appendChild(sp);
+      });
+      return wrapper;
+    }
+    case 'habits': {
+      const rowH_mm = cbSize + 1.5;
+      const maxRows = Math.max(1, Math.floor(h_mm / rowH_mm));
+      wrapper.style.cssText += `display:flex;flex-direction:column;gap:1.5mm;overflow:hidden;font-size:${block.fs||6}pt;color:${eColor||colors.ink};`;
+      const todayHabs = data.todayHabits || habits;
+      todayHabs.slice(0, maxRows).forEach(h => {
+        const row = el('div','');
+        row.style.cssText = `display:flex;align-items:center;gap:2mm;`;
+        const box = el('div','');
+        box.style.cssText = `border:.5pt solid ${colors.dim};${getCheckboxStyle(cbSize)}flex-shrink:0;`;
+        row.appendChild(box);
+        const ico = lucideEl(h.icon||'star','3.5mm','3.5mm');
+        ico.style.color = iconColor(h.icon,colors.dim);
+        row.appendChild(ico);
+        row.appendChild(el('span','',h.name));
+        wrapper.appendChild(row);
+      });
+      return wrapper;
+    }
+    case 'date':
+      wrapper.style.cssText += `display:flex;align-items:center;justify-content:center;font-weight:700;font-size:${block.fs||18}pt;color:${eColor||colors.line};line-height:1;`;
+      wrapper.textContent = data.day || new Date().getDate();
+      return wrapper;
+    case 'moonPhase': {
+      wrapper.style.cssText += `display:flex;align-items:center;justify-content:center;`;
+      if(data.year!=null) wrapper.innerHTML = moonSVG(getMoonPhase(data.year, data.month, data.day), Math.min(w_mm,h_mm).toFixed(1)+'mm', eColor||colors.dim);
+      return wrapper;
+    }
+    case 'image':
+      wrapper.style.cssText += `display:flex;align-items:center;justify-content:center;`;
+      if(block.imageSrc){
+        const img = document.createElement('img');
+        img.src = block.imageSrc;
+        img.style.cssText = 'width:100%;height:100%;object-fit:contain;';
+        wrapper.appendChild(img);
+      }
+      return wrapper;
+    case 'weekNum': {
+      wrapper.style.cssText += `display:flex;align-items:center;color:${eColor||colors.dim};font-size:${block.fs||6}pt;font-weight:700;text-transform:uppercase;letter-spacing:.05em;`;
+      if(block.font) wrapper.style.fontFamily = `'${block.font}',serif`;
+      const wn = data.weekNum || '';
+      wrapper.textContent = wn ? `Week ${wn}` : `${MONTHS[data.month||0]} ${data.year||''}`;
+      return wrapper;
+    }
+    case 'monthYear':
+      wrapper.style.cssText += `display:flex;align-items:center;color:${eColor||colors.dim};font-size:${block.fs||7}pt;font-weight:700;`;
+      if(block.font) wrapper.style.fontFamily = `'${block.font}',serif`;
+      wrapper.textContent = `${MONTHS[data.month||0]} ${data.year||''}`;
+      return wrapper;
+  }
+  return wrapper;
+}
+
+function mkLayoutPage(lbl, pageType, colors, data){
+  const layout = getLayout(pageType);
+  if(!layout) return null;
+  data.pageType = pageType;
+  const sz = tnSize();
+  const m = opts.margin || 6;
+  const innerW = sz.w - 2*(m+1);
+  const innerH = sz.h - 2*m;
+  const p = pg(lbl, colors);
+  p.style.position = 'relative';
+  p.style.padding = '0';
+  const content = el('div','');
+  content.style.cssText = `position:absolute;left:${m+1}mm;top:${m}mm;width:${innerW}mm;height:${innerH}mm;`;
+  layout.forEach(block => {
+    const rendered = renderLayoutBlock(block, innerW, innerH, colors, data);
+    if(rendered) content.appendChild(rendered);
+  });
+  p.appendChild(content);
+  return p;
 }
 
 /* ══════════════════════════════════════════════
@@ -1717,15 +2012,8 @@ function mkBackCover(y,m,c){
 
 /* ── MONTHLY PAGE BUILDERS ── */
 
-function mkHabitMap(y,m,c){
-  const colors=c||getColors();
-  const p=pg('habit-map',colors);
-  p.classList.add('fcol');
+function buildHabitMapGrid(y,m,colors){
   const days=daysInMonth(y,m);
-  const hdr=el('div','sh',`${MONTHS[m]} ${y} — Habit Tracker`);
-  hdr.style.cssText=`color:${colors.dim};border-bottom:.3pt solid ${colors.line};`;
-  p.appendChild(hdr);
-
   const habList=habits.length>0?habits:[{icon:'star',name:'Habit 1',days:[0,1,2,3,4,5,6]}];
   const totalCols=Math.max(habList.length+3, 7);
   const extraCols=totalCols-habList.length;
@@ -1791,12 +2079,67 @@ function mkHabitMap(y,m,c){
     }
   }
 
+  return tbl;
+}
+
+function mkHabitMap(y,m,c){
+  const colors=c||getColors();
+  const tbl = buildHabitMapGrid(y,m,colors);
+
+  // Try layout-aware render
+  const layoutPage = mkLayoutPage('habit-map', 'habit-map', colors, { habitGrid: tbl.cloneNode(true), year: y, month: m });
+  if(layoutPage) return layoutPage;
+
+  // Fallback
+  const p=pg('habit-map',colors);
+  p.classList.add('fcol');
+  const hdr=el('div','sh',`${MONTHS[m]} ${y} — Habit Tracker`);
+  hdr.style.cssText=`color:${colors.dim};border-bottom:.3pt solid ${colors.line};`;
+  p.appendChild(hdr);
   p.appendChild(tbl);
   return p;
 }
 
 function mkGoalsPage(y,m,c){
   const colors=c||getColors();
+
+  // Build goals list widget for layout or fallback
+  const goalsWidget=el('div','');
+  goalsWidget.style.cssText='display:flex;flex-direction:column;gap:2mm;';
+  for(let i=0;i<5;i++){
+    const goal=el('div','');
+    goal.style.cssText=`padding:1.5mm 0;${i<4?'border-bottom:.3pt solid '+colors.line+';':''}`;
+    const row=el('div','');
+    row.style.cssText=`display:flex;align-items:center;gap:1.5mm;margin-bottom:1.5mm;`;
+    const num=el('span','',`${i+1}.`);
+    num.style.cssText=`font-size:7pt;font-weight:700;color:${colors.dim};min-width:3mm;`;
+    row.appendChild(num);
+    const box=el('div','');
+    box.style.cssText=`width:3.5mm;height:3.5mm;border:.4pt solid ${colors.dim};flex-shrink:0;${getCheckboxStyle(3.5)}`;
+    row.appendChild(box);
+    const line=el('div','');
+    line.style.cssText=`flex:1;border-bottom:.3pt solid ${colors.dim};height:3mm;`;
+    row.appendChild(line);
+    goal.appendChild(row);
+    for(let a=0;a<2;a++){
+      const step=el('div','');
+      step.style.cssText=`display:flex;align-items:center;gap:1mm;margin-left:6mm;margin-bottom:1mm;`;
+      const bullet=el('span','','·');
+      bullet.style.cssText=`font-size:6pt;color:${colors.dot};`;
+      step.appendChild(bullet);
+      const sl=el('div','');
+      sl.style.cssText=`flex:1;border-bottom:.2pt dotted ${colors.line};height:2.5mm;`;
+      step.appendChild(sl);
+      goal.appendChild(step);
+    }
+    goalsWidget.appendChild(goal);
+  }
+
+  // Try layout-aware render
+  const layoutPage = mkLayoutPage('goals', 'goals', colors, { goalsList: goalsWidget, year: y, month: m });
+  if(layoutPage) return layoutPage;
+
+  // Fallback
   const p=pg('goals',colors);
   p.classList.add('fcol');
   const hdr=el('div','sh',`${MONTHS[m]} ${y} — Goals`);
@@ -1837,14 +2180,7 @@ function mkGoalsPage(y,m,c){
   return p;
 }
 
-function mkMoodCalendar(y,m,c){
-  const colors=c||getColors();
-  const p=pg('mood-cal',colors);
-  p.classList.add('fcol');
-  const hdr=el('div','sh',`${MONTHS[m]} ${y} — Mood`);
-  hdr.style.cssText=`color:${colors.dim};border-bottom:.3pt solid ${colors.line};`;
-  p.appendChild(hdr);
-
+function buildMoodGrid(y,m,colors){
   const wdayLabels=getWdayLabels();
   const startOffset=opts.weekstart==='sunday'?0:1;
   const firstDay=firstDow(y,m);
@@ -1885,8 +2221,6 @@ function mkMoodCalendar(y,m,c){
     cell.appendChild(circle);
     grid.appendChild(cell);
   });
-  p.appendChild(grid);
-
   const legend=el('div','');
   legend.style.cssText=`display:flex;justify-content:center;gap:3mm;padding:2mm 0 0;flex-shrink:0;`;
   MOOD_ICONS5.forEach(name=>{
@@ -1900,32 +2234,40 @@ function mkMoodCalendar(y,m,c){
     item.appendChild(ico);
     legend.appendChild(item);
   });
+  return { grid, legend };
+}
+
+function mkMoodCalendar(y,m,c){
+  const colors=c||getColors();
+  const { grid, legend } = buildMoodGrid(y,m,colors);
+
+  // Try layout-aware render
+  const layoutPage = mkLayoutPage('mood-cal', 'mood-cal', colors, { moodCalGrid: grid.cloneNode(true), moodLegend: legend.cloneNode(true), year: y, month: m });
+  if(layoutPage) return layoutPage;
+
+  // Fallback
+  const p=pg('mood-cal',colors);
+  p.classList.add('fcol');
+  const hdr=el('div','sh',`${MONTHS[m]} ${y} — Mood`);
+  hdr.style.cssText=`color:${colors.dim};border-bottom:.3pt solid ${colors.line};`;
+  p.appendChild(hdr);
+  p.appendChild(grid);
   p.appendChild(legend);
   return p;
 }
 
-function mkExpenseTracker(y,m,c){
-  const colors=c||getColors();
-  const p=pg('expenses',colors);
-  p.classList.add('fcol');
-  const hdr=el('div','sh',`${MONTHS[m]} ${y} — Expenses`);
-  hdr.style.cssText=`color:${colors.dim};border-bottom:.3pt solid ${colors.line};`;
-  p.appendChild(hdr);
-
+function buildExpenseTable(colors){
   const sz=tnSize();
   const usableW=sz.w-2*(opts.margin+1);
   const catW=+(usableW*0.4).toFixed(1);
   const numW=+(usableW*0.2).toFixed(1);
-
   const tbl=el('div','');
   tbl.style.cssText=`display:grid;grid-template-columns:${catW}mm ${numW}mm ${numW}mm ${numW}mm;gap:0;width:100%;`;
-
   ['Category','Budget','Actual','+/−'].forEach((lbl,i)=>{
     const h=el('div','',lbl);
     h.style.cssText=`font-size:5pt;font-weight:700;text-transform:uppercase;color:${colors.dim};padding:1mm .5mm;border-bottom:.4pt solid ${colors.dim};${i>0?'text-align:right;':''}`;
     tbl.appendChild(h);
   });
-
   const cats=['Housing','Food','Transport','Health','Entertainment','Shopping','Subscriptions','Savings',''];
   const totalRows=16;
   for(let r=0;r<totalRows;r++){
@@ -1941,8 +2283,24 @@ function mkExpenseTracker(y,m,c){
       tbl.appendChild(nc);
     }
   }
-  p.appendChild(tbl);
+  return tbl;
+}
 
+function mkExpenseTracker(y,m,c){
+  const colors=c||getColors();
+  const tbl = buildExpenseTable(colors);
+
+  // Try layout-aware render
+  const layoutPage = mkLayoutPage('expenses', 'expenses', colors, { expenseTable: tbl.cloneNode(true), year: y, month: m });
+  if(layoutPage) return layoutPage;
+
+  // Fallback
+  const p=pg('expenses',colors);
+  p.classList.add('fcol');
+  const hdr=el('div','sh',`${MONTHS[m]} ${y} — Expenses`);
+  hdr.style.cssText=`color:${colors.dim};border-bottom:.3pt solid ${colors.line};`;
+  p.appendChild(hdr);
+  p.appendChild(tbl);
   const fill=el('div','d-fill');
   fill.style.cssText=getFillStyle(colors);
   p.appendChild(fill);
@@ -2199,27 +2557,17 @@ function mkMonthGraphs(y,m,c){
   return p;
 }
 
-function mkWeekSummary(y,m,wn,wdays,c){
-  const colors=c||getColors();
+function buildWeekTrackerGrid(wdays, colors){
   const cbSize=opts.cbsize;
   const labels=getWdayLabels();
-  const p=pg(`wk${wn}`,colors);
-  p.classList.add('fcol');
-  const valid=wdays.filter(d=>d>0);
-  const hdr=el('div','sh',`Week ${wn} · ${MONTHS[m]} ${valid[0]}–${valid[valid.length-1]}`);
-  hdr.style.cssText=`color:${colors.dim};border-bottom:.3pt solid ${colors.line};`;
-  p.appendChild(hdr);
-
   const sec=el('div','wk-hab-sec');
   sec.style.gridTemplateColumns=`1fr repeat(7,${cbSize}mm)`;
-
   sec.appendChild(el('div',''));
   wdays.forEach((d,i)=>{
     const cell=el('div',`wk-dhc${d===0?' pad':''}`);
     cell.innerHTML=`<span class="dl" style="color:${colors.ink}">${labels[i]}</span><span class="dn" style="color:${colors.dim}">${d>0?d:''}</span>`;
     sec.appendChild(cell);
   });
-
   const habitsToShow=habits.length>0?habits:[{icon:'star',name:'Add habits',days:[0,1,2,3,4,5,6]}];
   habitsToShow.forEach(h=>{
     const nameCell=el('span','wk-hab-name');
@@ -2237,8 +2585,32 @@ function mkWeekSummary(y,m,wn,wdays,c){
       sec.appendChild(cell);
     });
   });
+  return sec;
+}
 
-  p.appendChild(sec);
+function mkWeekSummary(y,m,wn,wdays,c){
+  const colors=c||getColors();
+  const valid=wdays.filter(d=>d>0);
+
+  // Try layout-aware render
+  const trackerGrid = buildWeekTrackerGrid(wdays, colors);
+  const layoutPage = mkLayoutPage(`wk${wn}`, 'weekly', colors, {
+    weekTracker: trackerGrid,
+    weekNum: wn, month: m, year: y,
+    headerTitle: `Week ${wn} · ${MONTHS[m]} ${valid[0]}–${valid[valid.length-1]}`
+  });
+  if(layoutPage) return layoutPage;
+
+  // Fallback: original hardcoded layout
+  const cbSize=opts.cbsize;
+  const labels=getWdayLabels();
+  const p=pg(`wk${wn}`,colors);
+  p.classList.add('fcol');
+  const hdr=el('div','sh',`Week ${wn} · ${MONTHS[m]} ${valid[0]}–${valid[valid.length-1]}`);
+  hdr.style.cssText=`color:${colors.dim};border-bottom:.3pt solid ${colors.line};`;
+  p.appendChild(hdr);
+
+  p.appendChild(buildWeekTrackerGrid(wdays, colors));
   const sep=el('hr','d-sep');
   sep.style.cssText=getSeparatorStyle(colors);
   p.appendChild(sep);
@@ -2250,10 +2622,20 @@ function mkWeekSummary(y,m,wn,wdays,c){
 
 function mkDay(y,m,d,c){
   const colors=c||getColors();
-  const p=pg(`${m+1}/${d}`,colors);
-  p.classList.add('fcol');
   const w=dow(y,m,d);
   const wdayIdx=opts.weekstart==='sunday' ? w : (w+6)%7;
+  const todayHabits=habits.filter(h=>!h.days||h.days.includes(wdayIdx));
+
+  // Try layout-aware render
+  const layoutPage = mkLayoutPage(`${m+1}/${d}`, 'daily', colors, {
+    dayName: DOW_FULL[w], dayNum: d, year: y, month: m, day: d,
+    todayHabits: todayHabits
+  });
+  if(layoutPage) return layoutPage;
+
+  // Fallback: original hardcoded layout
+  const p=pg(`${m+1}/${d}`,colors);
+  p.classList.add('fcol');
 
   const hdr=el('div','d-hdr');
   hdr.style.cssText=`border-bottom:.3pt solid ${colors.line};`;
@@ -2295,7 +2677,6 @@ function mkDay(y,m,d,c){
   }
 
   const habList=el('div','d-hab-list');
-  const todayHabits=habits.filter(h=>!h.days||h.days.includes(wdayIdx));
   todayHabits.forEach(h=>{
     const row=el('div','d-hab-row');
     const box=el('div','d-box');

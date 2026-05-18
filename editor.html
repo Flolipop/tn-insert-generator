@@ -22,8 +22,16 @@ select:focus,input:focus{border-color:var(--acc);}
 input[type="number"]{width:56px;}
 label{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.03em;}
 
+/* Top Nav */
+#app-nav{position:fixed;top:0;left:0;right:0;z-index:600;display:flex;gap:8px;padding:5px 12px;background:#16132a;font-size:11px;align-items:center;border-bottom:1px solid var(--border);height:32px;}
+#app-nav strong{color:var(--text);margin-right:6px;}
+#app-nav a{color:var(--dim);text-decoration:none;padding:2px 8px;border-radius:3px;transition:background .15s;}
+#app-nav a:hover{background:var(--surface2);color:var(--text);}
+#app-nav a.active{background:rgba(124,111,192,.2);color:var(--acc2);}
+#app-nav .nav-toggle{display:none;margin-left:auto;background:none;border:none;color:var(--text);font-size:18px;cursor:pointer;padding:2px 6px;}
+
 /* Layout */
-#app{display:grid;grid-template-rows:42px 1fr;grid-template-columns:220px 1fr 220px;height:100vh;}
+#app{display:grid;grid-template-rows:42px 1fr;grid-template-columns:220px 1fr 220px;height:calc(100vh - 32px);margin-top:32px;}
 #toolbar{grid-column:1/-1;display:flex;align-items:center;gap:10px;padding:0 12px;background:var(--surface);border-bottom:1px solid var(--border);}
 #toolbar .sep{width:1px;height:24px;background:var(--border);}
 #toolbar .group{display:flex;align-items:center;gap:6px;}
@@ -71,6 +79,8 @@ label{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.0
 .ed-handle.s{bottom:-4px;left:calc(50% - 4px);cursor:s-resize;}
 .ed-handle.sw{bottom:-4px;left:-4px;cursor:sw-resize;}
 .ed-handle.w{top:calc(50% - 4px);left:-4px;cursor:w-resize;}
+.ed-handle.rotate{top:-22px;left:calc(50% - 5px);width:10px;height:10px;cursor:grab;background:var(--acc);border-radius:50%;border:1.5px solid #fff;}
+.ed-handle.rotate::before{content:'';position:absolute;bottom:-8px;left:50%;width:1px;height:8px;background:var(--acc);transform:translateX(-50%);}
 .ed-guide-v{position:absolute;top:0;bottom:0;width:1px;background:var(--acc2);pointer-events:none;z-index:200;}
 .ed-guide-h{position:absolute;left:0;right:0;height:1px;background:var(--acc2);pointer-events:none;z-index:200;}
 
@@ -122,9 +132,43 @@ label{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.0
 .toggle input:checked+.slider:before{transform:translateX(14px);background:#fff;}
 #global-props{overflow-y:auto;flex:1;}
 .divider-label{padding:6px 12px 2px;font-size:9px;text-transform:uppercase;letter-spacing:.08em;color:var(--acc2);font-weight:700;}
+.icon-picker-wrap{position:relative;}
+.hab-icon-btn{display:flex;align-items:center;justify-content:center;width:30px;height:28px;padding:0!important;flex-shrink:0;background:var(--surface)!important;border:1px solid var(--border)!important;border-radius:4px;}
+.hab-icon-btn:hover{border-color:var(--acc)!important;}
+.hab-icon-btn svg{width:16px;height:16px;stroke:var(--text);}
+.icon-picker-grid{display:none;position:fixed;z-index:9999;background:var(--surface);border:1px solid var(--border);border-radius:4px;padding:6px;grid-template-columns:repeat(6,1fr);gap:3px;width:200px;max-height:200px;overflow-y:auto;box-shadow:0 4px 12px rgba(0,0,0,.4);}
+.icon-picker-grid.open{display:grid;}
+.icon-opt{padding:5px;background:rgba(255,255,255,.06);border:1px solid transparent;border-radius:3px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.icon-opt:hover{background:rgba(255,255,255,.18);}
+.icon-opt.selected{border-color:var(--acc);background:rgba(124,111,192,.25);}
+.icon-opt svg{width:14px;height:14px;stroke:var(--text);}
+
+/* ── Mobile ── */
+@media (max-width:768px){
+  #app{grid-template-columns:1fr;grid-template-rows:auto 1fr;height:calc(100vh - 32px);}
+  #app-nav .nav-toggle{display:flex;align-items:center;justify-content:center;}
+  #app-nav a:not(.active){display:none;}
+  #toolbar{overflow-x:auto;gap:6px;padding:0 8px;}
+  #toolbar .title{display:none;}
+  #toolbar .sep{display:none;}
+  #left-panel{display:none;position:fixed;top:74px;left:0;width:240px;height:calc(100vh - 74px);z-index:300;background:var(--bg);border-right:1px solid var(--border);box-shadow:4px 0 12px rgba(0,0,0,.3);}
+  #left-panel.mobile-open{display:flex;}
+  #right-panel{display:none;position:fixed;top:74px;right:0;width:240px;height:calc(100vh - 74px);z-index:300;background:var(--bg);border-left:1px solid var(--border);box-shadow:-4px 0 12px rgba(0,0,0,.3);}
+  #right-panel.mobile-open{display:flex;}
+  #canvas-area{grid-column:1;touch-action:pan-x pan-y;}
+}
 </style>
 </head>
 <body>
+<!-- NAV -->
+<nav id="app-nav">
+  <strong>TN Tools</strong>
+  <a href="weekly.html">📅 Planner</a>
+  <a href="editor.html" class="active">✏️ Layout Editor</a>
+  <a href="gym.html">🏋️ Gym Log</a>
+  <button class="nav-toggle" onclick="document.getElementById('left-panel').classList.toggle('mobile-open');document.getElementById('right-panel').classList.toggle('mobile-open');">☰</button>
+</nav>
+
 <div id="app">
 
 <!-- TOOLBAR -->
@@ -187,6 +231,11 @@ label{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.0
       <button class="palette-btn" data-add="mood"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>Mood</button>
       <button class="palette-btn" data-add="habits"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></svg>Habits</button>
       <button class="palette-btn" data-add="field"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 20h16"/><path d="M4 16h12"/></svg>Field</button>
+      <button class="palette-btn" data-add="date"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><text x="12" y="18" text-anchor="middle" font-size="8" fill="currentColor" stroke="none">17</text></svg>Date</button>
+      <button class="palette-btn" data-add="moonPhase"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a7 7 0 0 0 0 20 10 10 0 0 1 0-20"/></svg>Moon</button>
+      <button class="palette-btn" data-add="image"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="m21 15-5-5L5 21"/></svg>Image</button>
+      <button class="palette-btn" data-add="weekNum"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4"/><text x="12" y="17" text-anchor="middle" font-size="8" fill="currentColor" stroke="none">W3</text></svg>Week #</button>
+      <button class="palette-btn" data-add="monthYear"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Month</button>
     </div>
   </div>
   <div class="panel-section" style="flex:1;overflow-y:auto;">
@@ -212,6 +261,7 @@ label{font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.0
       <div class="prop-row"><label>W</label><input type="number" id="prop-w" step="0.1" min="1" max="100"></div>
       <div class="prop-row"><label>H</label><input type="number" id="prop-h" step="0.1" min="0.5" max="100"></div>
       <div class="prop-row"><label>Fs</label><input type="number" id="prop-fs" step="0.5" min="0" max="72"></div>
+      <div class="prop-row"><label>R°</label><input type="number" id="prop-rot" step="1" min="0" max="359"></div>
     </div>
     <div class="panel-section">
       <h3>Appearance</h3>
@@ -367,7 +417,12 @@ const REF_SIZES = {
   checkbox:    { w:50,  h:5  },
   icon:        { w:6,   h:6  },
   field:       { w:30,  h:5  },
-  mood:        { w:38,  h:5  }
+  mood:        { w:38,  h:5  },
+  date:        { w:20,  h:10 },
+  moonPhase:   { w:6,   h:5  },
+  image:       { w:30,  h:30 },
+  weekNum:     { w:30,  h:6  },
+  monthYear:   { w:50,  h:6  }
 };
 
 function elemScale(block, innerW_mm, innerH_mm){
@@ -388,7 +443,12 @@ const NEW_ELEM_DEFAULTS = {
   fill:      { w:100,h:30, fs:0,   fillPattern:'dots' },
   mood:      { w:38, h:5,  fs:0 },
   habits:    { w:100,h:32, fs:6 },
-  field:     { w:30, h:5,  fs:4.5, fieldLabel:'Label' }
+  field:     { w:30, h:5,  fs:4.5, fieldLabel:'Label' },
+  date:      { w:20, h:10, fs:18 },
+  moonPhase: { w:6,  h:5,  fs:0 },
+  image:     { w:30, h:30, fs:0, imageSrc:'', imageFile:'' },
+  weekNum:   { w:30, h:6,  fs:6 },
+  monthYear: { w:50, h:6,  fs:7 }
 };
 
 /* ══════════════════════════════════════════════
@@ -396,6 +456,11 @@ const NEW_ELEM_DEFAULTS = {
    ══════════════════════════════════════════════ */
 const $ = id => document.getElementById(id);
 function el(t,c,x){ const e=document.createElement(t); if(c)e.className=c; if(x!=null)e.textContent=x; return e; }
+
+function getWeekNumber(d){
+  const t = new Date(d.getFullYear(), 0, 1);
+  return Math.ceil(((d - t) / 86400000 + t.getDay() + 1) / 7);
+}
 
 function getMoonPhase(year, month, day){
   const d = new Date(year, month, day);
@@ -439,10 +504,10 @@ function getFillStyle(colors, fillPattern, dotgrid){
   const g = dotgrid || 5;
   const half = +(g/2).toFixed(1);
   switch(fillPattern || 'dots'){
-    case 'dots': return `background-image:radial-gradient(circle,${colors.dot} .6px,transparent .6px);background-size:${g}mm ${g}mm;background-position:${half}mm ${half}mm;`;
-    case 'lines': return `background-image:linear-gradient(to bottom,${colors.dot} 0,${colors.dot} .4px,transparent .4px);background-size:100% ${g}mm;background-position:0 ${half}mm;`;
-    case 'grid': return `background-image:linear-gradient(${colors.dot} .4px,transparent .4px),linear-gradient(90deg,${colors.dot} .4px,transparent .4px);background-size:${g}mm ${g}mm;background-position:${half}mm ${half}mm;`;
-    case 'hex': { const hx=+(g*0.866).toFixed(2); return `background-image:radial-gradient(circle,${colors.dot} .6px,transparent .6px),radial-gradient(circle,${colors.dot} .6px,transparent .6px);background-size:${g}mm ${+(2*hx).toFixed(2)}mm;background-position:0 0,${half}mm ${hx}mm;`; }
+    case 'dots': return `background-image:radial-gradient(circle,${colors.dot} 1px,transparent 1px);background-size:${g}mm ${g}mm;background-position:${half}mm ${half}mm;`;
+    case 'lines': return `background-image:linear-gradient(to bottom,${colors.dot} 0,${colors.dot} .8px,transparent .8px);background-size:100% ${g}mm;background-position:0 ${half}mm;`;
+    case 'grid': return `background-image:linear-gradient(${colors.dot} .8px,transparent .8px),linear-gradient(90deg,${colors.dot} .8px,transparent .8px);background-size:${g}mm ${g}mm;background-position:${half}mm ${half}mm;`;
+    case 'hex': { const hx=+(g*0.866).toFixed(2); return `background-image:radial-gradient(circle,${colors.dot} 1px,transparent 1px),radial-gradient(circle,${colors.dot} 1px,transparent 1px);background-size:${g}mm ${+(2*hx).toFixed(2)}mm;background-position:0 0,${half}mm ${hx}mm;`; }
     default: return 'background-image:none;';
   }
 }
@@ -461,6 +526,7 @@ let currentPage = 'daily';
 let history = [];
 let historyIdx = -1;
 let dragging = false;
+let _dragRAF = null;
 
 function loadFromPlanner(){
   try {
@@ -552,10 +618,18 @@ function redo(){
 function render(){
   const wrap = $('canvas-wrap');
   const sz = tnSize();
-  const w = sz.w * zoom;
-  const h = sz.h * zoom;
-  wrap.style.width = w + 'px';
-  wrap.style.height = h + 'px';
+  // Base size: 3px per mm. Zoom via CSS transform so mm/pt/patterns all scale.
+  const BASE = 3;
+  const baseW = sz.w * BASE;
+  const baseH = sz.h * BASE;
+  const scale = zoom / BASE;
+  wrap.style.width = baseW + 'px';
+  wrap.style.height = baseH + 'px';
+  wrap.style.transform = `scale(${scale})`;
+  wrap.style.transformOrigin = 'top left';
+  // Margin accounts for scaled visual size so flex/scroll layout works
+  wrap.style.marginRight = ((baseW * scale) - baseW) + 'px';
+  wrap.style.marginBottom = ((baseH * scale) - baseH) + 'px';
   wrap.innerHTML = '';
 
   const colors = getColors();
@@ -572,9 +646,15 @@ function render(){
   const innerW_mm = sz.w - 2*(margin+1);
   const innerH_mm = sz.h - 2*margin;
 
+  // Margin guide lines
+  const guide = document.createElement('div');
+  guide.style.cssText = `position:absolute;left:${padX}%;top:${padY}%;width:${innerW}%;height:${innerH}%;border:1px dashed rgba(124,111,192,.35);pointer-events:none;z-index:2;`;
+  wrap.appendChild(guide);
+
   // Render page preview background
   const preview = buildPreview(currentPage, colors, elems, padX, padY, innerW, innerH, innerW_mm, innerH_mm);
   if(preview){
+    preview.dataset.preview = '1';
     preview.style.cssText += 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:1;overflow:hidden;';
     wrap.appendChild(preview);
   }
@@ -593,11 +673,12 @@ function render(){
     div.style.width = (block.w * innerW / 100) + '%';
     div.style.height = (block.h * innerH / 100) + '%';
     div.style.zIndex = 10 + (block.zIndex || 0);
+    if(block.rotation) div.style.transform = `rotate(${block.rotation}deg)`;
 
     const label = el('span','ed-block-label', block.label);
     div.appendChild(label);
 
-    ['nw','n','ne','e','se','s','sw','w'].forEach(pos => {
+    ['nw','n','ne','e','se','s','sw','w','rotate'].forEach(pos => {
       const hd = el('div','ed-handle ' + pos);
       hd.dataset.handle = pos;
       div.appendChild(hd);
@@ -629,10 +710,11 @@ function refreshPreview(){
   const innerW_mm = sz.w - 2*(margin+1);
   const innerH_mm = sz.h - 2*margin;
   const elems = elements[currentPage] || [];
-  const old = wrap.children[0];
-  if(old && !old.classList.contains('ed-block')) old.remove();
+  const old = wrap.querySelector('[data-preview]');
+  if(old) old.remove();
   const preview = buildPreview(currentPage, colors, elems, padX, padY, innerW, innerH, innerW_mm, innerH_mm);
   if(preview){
+    preview.dataset.preview = '1';
     preview.style.cssText += 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:1;overflow:hidden;';
     wrap.insertBefore(preview, wrap.firstChild);
   }
@@ -653,7 +735,7 @@ function buildPreview(pageType, colors, elems, padX, padY, innerW, innerH, inner
 
     elems.forEach(block => {
       const wrapper = el('div','');
-      wrapper.style.cssText = `position:absolute;left:${padX + block.x*innerW/100}%;top:${padY + block.y*innerH/100}%;width:${block.w*innerW/100}%;height:${block.h*innerH/100}%;overflow:hidden;`;
+      wrapper.style.cssText = `position:absolute;left:${padX + block.x*innerW/100}%;top:${padY + block.y*innerH/100}%;width:${block.w*innerW/100}%;height:${block.h*innerH/100}%;overflow:hidden;${block.rotation ? 'transform:rotate('+block.rotation+'deg);' : ''}`;
       const s = elemScale(block, innerW_mm, innerH_mm);
       if(block.fs > 0) wrapper.style.fontSize = +(block.fs * s).toFixed(1) + 'pt';
       // Per-element font/color overrides
@@ -680,7 +762,7 @@ function buildPreview(pageType, colors, elems, padX, padY, innerW, innerH, inner
           wrapper.innerHTML = moonSVG(getMoonPhase(y, m, now.getDate()), '100%', eColor||colors.dim);
           break;
         case 'headerLine':
-          wrapper.style.cssText += `border-bottom:.3pt solid ${eColor||colors.line};`;
+          wrapper.style.cssText += `border-bottom:.75pt solid ${eColor||colors.line};`;
           break;
         case 'moodFaces': {
           const icoMM = +(5*s).toFixed(1);
@@ -707,14 +789,14 @@ function buildPreview(pageType, colors, elems, padX, padY, innerW, innerH, inner
             lb.style.cssText = `font-size:${lblPt}pt;text-transform:uppercase;white-space:nowrap;color:${eColor||colors.dim};`;
             fd.appendChild(lb);
             const ln = el('div','');
-            ln.style.cssText = `flex:1;border-bottom:.3pt solid ${eColor||colors.dim};height:${lineH}mm;`;
+            ln.style.cssText = `flex:1;border-bottom:.75pt solid ${eColor||colors.dim};height:${lineH}mm;`;
             fd.appendChild(ln);
             wrapper.appendChild(fd);
           });
           break;
         }
         case 'sep1': case 'sep2':
-          wrapper.style.cssText += `border-top:.3pt solid ${colors.line};`;
+          wrapper.style.cssText += `border-top:.75pt solid ${colors.line};`;
           break;
         case 'habits': {
           const cbMM = +(5*s).toFixed(1);
@@ -737,7 +819,7 @@ function buildPreview(pageType, colors, elems, padX, padY, innerW, innerH, inner
             const row = el('div','');
             row.style.cssText = `display:flex;align-items:center;gap:${rowGap}mm;`;
             const box = el('div','');
-            box.style.cssText = `border:.5pt solid ${eColor||colors.dim};width:${cbMM}mm;height:${cbMM}mm;border-radius:${radius};${transform}flex-shrink:0;`;
+            box.style.cssText = `border:1pt solid ${eColor||colors.dim};width:${cbMM}mm;height:${cbMM}mm;border-radius:${radius};${transform}flex-shrink:0;`;
             row.appendChild(box);
             const ico = el('span','');
             ico.setAttribute('data-lucide', h.icon || 'star');
@@ -746,17 +828,19 @@ function buildPreview(pageType, colors, elems, padX, padY, innerW, innerH, inner
             row.appendChild(el('span','',h.name));
             wrapper.appendChild(row);
           });
-          const remaining = maxRows - habitsToShow.length;
-          for(let i = 0; i < remaining; i++){
-            const row = el('div','');
-            row.style.cssText = `display:flex;align-items:center;gap:${rowGap}mm;`;
-            const box = el('div','');
-            box.style.cssText = `border:.5pt solid ${eColor||colors.dim};width:${cbMM}mm;height:${cbMM}mm;border-radius:${radius};${transform}flex-shrink:0;`;
-            row.appendChild(box);
-            const line = el('div','');
-            line.style.cssText = `flex:1;border-bottom:.3pt solid ${eColor||colors.line};height:${cbMM}mm;`;
-            row.appendChild(line);
-            wrapper.appendChild(row);
+          if(opts.showEmptyRows !== false){
+            const remaining = maxRows - habitsToShow.length;
+            for(let i = 0; i < remaining; i++){
+              const row = el('div','');
+              row.style.cssText = `display:flex;align-items:center;gap:${rowGap}mm;`;
+              const box = el('div','');
+              box.style.cssText = `border:1pt solid ${eColor||colors.dim};width:${cbMM}mm;height:${cbMM}mm;border-radius:${radius};${transform}flex-shrink:0;`;
+              row.appendChild(box);
+              const line = el('div','');
+              line.style.cssText = `flex:1;border-bottom:.75pt solid ${eColor||colors.line};height:${cbMM}mm;`;
+              row.appendChild(line);
+              wrapper.appendChild(row);
+            }
           }
           break;
         }
@@ -771,7 +855,7 @@ function buildPreview(pageType, colors, elems, padX, padY, innerW, innerH, inner
             if(block.font) wrapper.style.fontFamily = `'${block.font}', serif`;
             wrapper.textContent = block.content;
           } else if(block.type === 'separator'){
-            wrapper.style.cssText += `border-top:.3pt ${block.lineStyle||'solid'} ${eColor||colors.line};`;
+            wrapper.style.cssText += `border-top:.75pt ${block.lineStyle||'solid'} ${eColor||colors.line};`;
           } else if(block.type === 'fill'){
             wrapper.style.cssText += getFillStyle(colors, block.fillPattern, opts.dotgrid);
           } else if(block.type === 'field'){
@@ -784,21 +868,541 @@ function buildPreview(pageType, colors, elems, padX, padY, innerW, innerH, inner
             lb2.style.cssText = `font-size:${lblPt}pt;text-transform:uppercase;color:${eColor||colors.dim};`;
             wrapper.appendChild(lb2);
             const ln2 = el('div','');
-            ln2.style.cssText = `flex:1;border-bottom:.3pt solid ${eColor||colors.dim};height:${lineH}mm;`;
+            ln2.style.cssText = `flex:1;border-bottom:.75pt solid ${eColor||colors.dim};height:${lineH}mm;`;
             wrapper.appendChild(ln2);
+          } else if(block.type === 'checkbox'){
+            const cbMM = +(5*ds).toFixed(1);
+            const gapMM = +(2*ds).toFixed(1);
+            const shape = opts.checkbox || 'square';
+            let radius = '0';
+            if(shape==='circle') radius = '50%';
+            else if(shape==='rounded') radius = '1.2mm';
+            let transform = shape==='diamond' ? 'transform:rotate(45deg);' : '';
+            wrapper.style.cssText += `display:flex;align-items:center;gap:${gapMM}mm;flex-wrap:wrap;`;
+            for(let i = 0; i < (block.checkboxCount||1); i++){
+              const box = el('div','');
+              box.style.cssText = `border:1pt solid ${eColor||colors.dim};width:${cbMM}mm;height:${cbMM}mm;border-radius:${radius};${transform}flex-shrink:0;`;
+              wrapper.appendChild(box);
+            }
+          } else if(block.type === 'icon'){
+            const icoMM = +(5*ds).toFixed(1);
+            wrapper.style.cssText += `display:flex;align-items:center;justify-content:center;`;
+            const sp = el('span','');
+            sp.setAttribute('data-lucide', block.icon || 'star');
+            sp.style.cssText = `width:${icoMM}mm;height:${icoMM}mm;display:block;color:${ICON_COLORS[block.icon] || eColor || colors.dim};`;
+            wrapper.appendChild(sp);
+          } else if(block.type === 'mood'){
+            const icoMM = +(5*ds).toFixed(1);
+            wrapper.style.cssText += `display:flex;justify-content:space-between;align-items:center;`;
+            const icons = (opts.moodfaces===3 ? MOOD_ICONS3 : MOOD_ICONS5);
+            icons.forEach(name => {
+              const sp = el('span','');
+              sp.setAttribute('data-lucide', name);
+              sp.style.cssText = `width:${icoMM}mm;height:${icoMM}mm;display:block;color:${eColor||colors.dim};`;
+              wrapper.appendChild(sp);
+            });
+          } else if(block.type === 'habits'){
+            const cbMM = +(5*ds).toFixed(1);
+            const icoMM = +(3.5*ds).toFixed(1);
+            const gapMM = +(1.5*ds).toFixed(1);
+            const rowGap = +(2*ds).toFixed(1);
+            const fsPt = +(6*ds).toFixed(1);
+            const elemH_mm = block.h * innerH_mm / 100;
+            const rowH = parseFloat(cbMM) + parseFloat(gapMM);
+            const maxRows = Math.max(1, Math.floor(elemH_mm / rowH));
+            wrapper.style.cssText += `display:flex;flex-direction:column;gap:${gapMM}mm;overflow:hidden;font-size:${fsPt}pt;color:${eColor||colors.ink};`;
+            if(block.font) wrapper.style.fontFamily = `'${block.font}', serif`;
+            const shape = opts.checkbox || 'square';
+            let radius = '0';
+            if(shape==='circle') radius = '50%';
+            else if(shape==='rounded') radius = '1.2mm';
+            let transform = shape==='diamond' ? 'transform:rotate(45deg);' : '';
+            const habitsToShow = habits.slice(0, maxRows);
+            habitsToShow.forEach(h => {
+              const row = el('div','');
+              row.style.cssText = `display:flex;align-items:center;gap:${rowGap}mm;`;
+              const box = el('div','');
+              box.style.cssText = `border:1pt solid ${eColor||colors.dim};width:${cbMM}mm;height:${cbMM}mm;border-radius:${radius};${transform}flex-shrink:0;`;
+              row.appendChild(box);
+              const ico = el('span','');
+              ico.setAttribute('data-lucide', h.icon || 'star');
+              ico.style.cssText = `width:${icoMM}mm;height:${icoMM}mm;display:block;flex-shrink:0;color:${ICON_COLORS[h.icon] || eColor || colors.dim};`;
+              row.appendChild(ico);
+              row.appendChild(el('span','',h.name));
+              wrapper.appendChild(row);
+            });
+            if(opts.showEmptyRows !== false){
+              const remaining = maxRows - habitsToShow.length;
+              for(let i = 0; i < remaining; i++){
+                const row = el('div','');
+                row.style.cssText = `display:flex;align-items:center;gap:${rowGap}mm;`;
+                const box = el('div','');
+                box.style.cssText = `border:1pt solid ${eColor||colors.dim};width:${cbMM}mm;height:${cbMM}mm;border-radius:${radius};${transform}flex-shrink:0;`;
+                row.appendChild(box);
+                const line = el('div','');
+                line.style.cssText = `flex:1;border-bottom:.75pt solid ${eColor||colors.line};height:${cbMM}mm;`;
+                row.appendChild(line);
+                wrapper.appendChild(row);
+              }
+            }
+          } else if(block.type === 'date'){
+            const fsPt = block.fs > 0 ? +(block.fs*ds).toFixed(1) : +(18*ds).toFixed(1);
+            wrapper.style.cssText += `display:flex;align-items:center;justify-content:center;font-weight:700;font-size:${fsPt}pt;color:${eColor||colors.line};line-height:1;`;
+            if(block.font) wrapper.style.fontFamily = `'${block.font}', serif`;
+            wrapper.textContent = new Date().getDate();
+          } else if(block.type === 'moonPhase'){
+            const now = new Date();
+            const phase = getMoonPhase(now.getFullYear(), now.getMonth(), now.getDate());
+            const icoMM = +(5*ds).toFixed(1);
+            wrapper.style.cssText += `display:flex;align-items:center;justify-content:center;`;
+            wrapper.innerHTML = moonSVG(phase, icoMM+'mm', eColor||colors.dim);
+          } else if(block.type === 'image'){
+            wrapper.style.cssText += `display:flex;align-items:center;justify-content:center;`;
+            if(block.imageSrc){
+              const img = el('img','');
+              img.src = block.imageSrc;
+              img.style.cssText = 'width:100%;height:100%;object-fit:contain;';
+              wrapper.appendChild(img);
+            } else {
+              wrapper.style.cssText += `border:1px dashed ${colors.line};border-radius:2px;`;
+              const placeholder = el('span','','📷 No image');
+              placeholder.style.cssText = `font-size:${+(4*ds).toFixed(1)}pt;color:${colors.dim};`;
+              wrapper.appendChild(placeholder);
+            }
+          } else if(block.type === 'weekNum'){
+            const fsPt = block.fs > 0 ? +(block.fs*ds).toFixed(1) : +(6*ds).toFixed(1);
+            wrapper.style.cssText += `display:flex;align-items:center;color:${eColor||colors.dim};font-size:${fsPt}pt;font-weight:700;text-transform:uppercase;letter-spacing:.05em;`;
+            if(block.font) wrapper.style.fontFamily = `'${block.font}', serif`;
+            wrapper.textContent = 'Week ' + getWeekNumber(now);
+          } else if(block.type === 'monthYear'){
+            const fsPt = block.fs > 0 ? +(block.fs*ds).toFixed(1) : +(7*ds).toFixed(1);
+            wrapper.style.cssText += `display:flex;align-items:center;color:${eColor||colors.dim};font-size:${fsPt}pt;font-weight:700;`;
+            if(block.font) wrapper.style.fontFamily = `'${block.font}', serif`;
+            wrapper.textContent = MONTHS[now.getMonth()] + ' ' + now.getFullYear();
           }
         }
       }
       container.appendChild(wrapper);
     });
   } else {
-    // Non-daily pages: colored placeholder blocks
+    // Non-daily pages: full rendering
+    const now = new Date();
+    const y = now.getFullYear(), m = now.getMonth();
+    const daysInMonth = new Date(y, m+1, 0).getDate();
+    const firstDow = new Date(y, m, 1).getDay();
+    const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const DOW_SHORT = ['S','M','T','W','T','F','S'];
+
     elems.forEach(block => {
       const wrapper = el('div','');
-      wrapper.style.cssText = `position:absolute;left:${padX + block.x*innerW/100}%;top:${padY + block.y*innerH/100}%;width:${block.w*innerW/100}%;height:${block.h*innerH/100}%;overflow:hidden;border:1px dashed ${colors.line};border-radius:2px;display:flex;align-items:center;justify-content:center;`;
-      const lbl = el('span','',block.label);
-      lbl.style.cssText = `font-size:9px;color:${colors.dim};text-transform:uppercase;letter-spacing:.05em;`;
-      wrapper.appendChild(lbl);
+      wrapper.style.cssText = `position:absolute;left:${padX + block.x*innerW/100}%;top:${padY + block.y*innerH/100}%;width:${block.w*innerW/100}%;height:${block.h*innerH/100}%;overflow:hidden;${block.rotation ? 'transform:rotate('+block.rotation+'deg);' : ''}`;
+      const ds = elemScale(block, innerW_mm, innerH_mm);
+      if(block.font) wrapper.style.fontFamily = `'${block.font}', serif`;
+      const eColor = block.color || null;
+
+      switch(block.id){
+        case 'header': {
+          const autoFs = block.fs > 0 ? +(block.fs*ds).toFixed(1) : +(6*ds).toFixed(1);
+          const titles = {'weekly':'Week '+getWeekNumber(now),'goals':'Goals','habit-map':MONTHS[m]+' Habits','mood-cal':MONTHS[m]+' Mood','expenses':'Expenses'};
+          wrapper.style.cssText += `font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:${eColor||colors.dim};display:flex;align-items:center;font-size:${autoFs}pt;`;
+          wrapper.textContent = titles[pageType] || pageType;
+          break;
+        }
+        case 'sep': {
+          wrapper.style.cssText += `border-top:.75pt solid ${colors.line};`;
+          break;
+        }
+        case 'notes': {
+          wrapper.style.cssText += getFillStyle(colors, opts.fillPattern, opts.dotgrid);
+          break;
+        }
+        case 'tracker': {
+          // Weekly habit tracker: 7 columns (Mon-Sun), habit rows
+          const gapMM = +(1*ds).toFixed(1);
+          const cbMM = +(3.5*ds).toFixed(1);
+          const fsPt = +(4*ds).toFixed(1);
+          const hdrFs = +(3.5*ds).toFixed(1);
+          const shape = opts.checkbox || 'square';
+          let radius = '0';
+          if(shape==='circle') radius = '50%';
+          else if(shape==='rounded') radius = '1mm';
+          let transform = shape==='diamond' ? 'transform:rotate(45deg);' : '';
+          wrapper.style.cssText += `display:flex;flex-direction:column;gap:${gapMM}mm;font-size:${fsPt}pt;color:${eColor||colors.ink};`;
+
+          // Day headers row
+          const hdrRow = el('div','');
+          hdrRow.style.cssText = `display:flex;align-items:center;gap:${gapMM}mm;`;
+          const labelSpacer = el('div','');
+          labelSpacer.style.cssText = `width:25%;flex-shrink:0;`;
+          hdrRow.appendChild(labelSpacer);
+          ['M','T','W','T','F','S','S'].forEach(d => {
+            const cell = el('div','',d);
+            cell.style.cssText = `flex:1;text-align:center;font-size:${hdrFs}pt;color:${colors.dim};font-weight:700;`;
+            hdrRow.appendChild(cell);
+          });
+          wrapper.appendChild(hdrRow);
+
+          // Habit rows
+          const elemH_mm = block.h * innerH_mm / 100;
+          const rowH = parseFloat(cbMM) + parseFloat(gapMM) + 1;
+          const maxRows = Math.max(1, Math.floor((elemH_mm - 4) / rowH));
+          const habitsToShow = habits.slice(0, maxRows);
+          habitsToShow.forEach(h => {
+            const row = el('div','');
+            row.style.cssText = `display:flex;align-items:center;gap:${gapMM}mm;`;
+            const lbl = el('div','',h.name);
+            lbl.style.cssText = `width:25%;flex-shrink:0;font-size:${hdrFs}pt;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;`;
+            row.appendChild(lbl);
+            for(let d = 0; d < 7; d++){
+              const cell = el('div','');
+              cell.style.cssText = `flex:1;display:flex;justify-content:center;`;
+              const box = el('div','');
+              box.style.cssText = `border:.75pt solid ${eColor||colors.dim};width:${cbMM}mm;height:${cbMM}mm;border-radius:${radius};${transform}`;
+              cell.appendChild(box);
+              row.appendChild(cell);
+            }
+            wrapper.appendChild(row);
+          });
+          // Empty rows
+          if(opts.showEmptyRows !== false){
+            for(let i = habitsToShow.length; i < maxRows; i++){
+              const row = el('div','');
+              row.style.cssText = `display:flex;align-items:center;gap:${gapMM}mm;`;
+              const lbl = el('div','');
+              lbl.style.cssText = `width:25%;flex-shrink:0;border-bottom:.75pt solid ${colors.line};height:${cbMM}mm;`;
+              row.appendChild(lbl);
+              for(let d = 0; d < 7; d++){
+                const cell = el('div','');
+                cell.style.cssText = `flex:1;display:flex;justify-content:center;`;
+                const box = el('div','');
+                box.style.cssText = `border:.75pt solid ${eColor||colors.dim};width:${cbMM}mm;height:${cbMM}mm;border-radius:${radius};${transform}`;
+                cell.appendChild(box);
+                row.appendChild(cell);
+              }
+              wrapper.appendChild(row);
+            }
+          }
+          break;
+        }
+        case 'goals': {
+          // Goals list with checkboxes
+          const cbMM = +(5*ds).toFixed(1);
+          const gapMM = +(2*ds).toFixed(1);
+          const fsPt = +(5*ds).toFixed(1);
+          const shape = opts.checkbox || 'square';
+          let radius = '0';
+          if(shape==='circle') radius = '50%';
+          else if(shape==='rounded') radius = '1.2mm';
+          let transform = shape==='diamond' ? 'transform:rotate(45deg);' : '';
+          wrapper.style.cssText += `display:flex;flex-direction:column;gap:${gapMM}mm;font-size:${fsPt}pt;color:${eColor||colors.ink};`;
+          const elemH_mm = block.h * innerH_mm / 100;
+          const rowH = parseFloat(cbMM) + parseFloat(gapMM);
+          const maxRows = Math.max(1, Math.floor(elemH_mm / rowH));
+          for(let i = 0; i < maxRows; i++){
+            const row = el('div','');
+            row.style.cssText = `display:flex;align-items:center;gap:${gapMM}mm;`;
+            const box = el('div','');
+            box.style.cssText = `border:1pt solid ${eColor||colors.dim};width:${cbMM}mm;height:${cbMM}mm;border-radius:${radius};${transform}flex-shrink:0;`;
+            row.appendChild(box);
+            const line = el('div','');
+            line.style.cssText = `flex:1;border-bottom:.75pt solid ${eColor||colors.line};height:${cbMM}mm;`;
+            row.appendChild(line);
+            wrapper.appendChild(row);
+          }
+          break;
+        }
+        case 'grid': {
+          // Monthly habit grid: days across top, habits down side
+          const gapMM = +(0.5*ds).toFixed(1);
+          const cellMM = +(2.5*ds).toFixed(1);
+          const fsPt = +(3*ds).toFixed(1);
+          const shape = opts.checkbox || 'square';
+          let radius = '0';
+          if(shape==='circle') radius = '50%';
+          else if(shape==='rounded') radius = '0.5mm';
+          wrapper.style.cssText += `display:flex;flex-direction:column;gap:${gapMM}mm;font-size:${fsPt}pt;color:${eColor||colors.ink};overflow:hidden;`;
+
+          // Day numbers header
+          const hdrRow = el('div','');
+          hdrRow.style.cssText = `display:flex;align-items:center;gap:${gapMM}mm;`;
+          const labelSpacer = el('div','');
+          labelSpacer.style.cssText = `width:20%;flex-shrink:0;`;
+          hdrRow.appendChild(labelSpacer);
+          for(let d = 1; d <= daysInMonth; d++){
+            const cell = el('div','',String(d));
+            cell.style.cssText = `flex:1;text-align:center;font-size:${+(2.5*ds).toFixed(1)}pt;color:${colors.dim};min-width:0;`;
+            hdrRow.appendChild(cell);
+          }
+          wrapper.appendChild(hdrRow);
+
+          // Habit rows
+          const elemH_mm = block.h * innerH_mm / 100;
+          const rowH = parseFloat(cellMM) + parseFloat(gapMM) + 0.5;
+          const maxRows = Math.max(1, Math.floor((elemH_mm - 3) / rowH));
+          const habitsToShow = habits.slice(0, maxRows);
+          habitsToShow.forEach(h => {
+            const row = el('div','');
+            row.style.cssText = `display:flex;align-items:center;gap:${gapMM}mm;`;
+            const lbl = el('div','',h.name);
+            lbl.style.cssText = `width:20%;flex-shrink:0;font-size:${fsPt}pt;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;`;
+            row.appendChild(lbl);
+            for(let d = 0; d < daysInMonth; d++){
+              const box = el('div','');
+              box.style.cssText = `flex:1;aspect-ratio:1;border:.75pt solid ${eColor||colors.dim};border-radius:${radius};min-width:0;`;
+              row.appendChild(box);
+            }
+            wrapper.appendChild(row);
+          });
+          // Empty rows
+          for(let i = habitsToShow.length; i < maxRows; i++){
+            const row = el('div','');
+            row.style.cssText = `display:flex;align-items:center;gap:${gapMM}mm;`;
+            const lbl = el('div','');
+            lbl.style.cssText = `width:20%;flex-shrink:0;border-bottom:.75pt solid ${colors.line};height:${cellMM}mm;`;
+            row.appendChild(lbl);
+            for(let d = 0; d < daysInMonth; d++){
+              const box = el('div','');
+              box.style.cssText = `flex:1;aspect-ratio:1;border:.75pt solid ${eColor||colors.dim};border-radius:${radius};min-width:0;`;
+              row.appendChild(box);
+            }
+            wrapper.appendChild(row);
+          }
+          break;
+        }
+        case 'calendar': {
+          // Monthly calendar grid
+          const cellGap = +(0.5*ds).toFixed(1);
+          const fsPt = +(4*ds).toFixed(1);
+          const hdrFs = +(3.5*ds).toFixed(1);
+          wrapper.style.cssText += `display:flex;flex-direction:column;gap:${cellGap}mm;font-size:${fsPt}pt;color:${eColor||colors.ink};`;
+
+          // DOW header
+          const hdrRow = el('div','');
+          hdrRow.style.cssText = `display:flex;gap:${cellGap}mm;`;
+          DOW_SHORT.forEach(d => {
+            const cell = el('div','',d);
+            cell.style.cssText = `flex:1;text-align:center;font-size:${hdrFs}pt;color:${colors.dim};font-weight:700;`;
+            hdrRow.appendChild(cell);
+          });
+          wrapper.appendChild(hdrRow);
+
+          // Calendar weeks
+          let dayNum = 1;
+          for(let week = 0; week < 6; week++){
+            if(dayNum > daysInMonth) break;
+            const row = el('div','');
+            row.style.cssText = `display:flex;gap:${cellGap}mm;flex:1;`;
+            for(let dow = 0; dow < 7; dow++){
+              const cell = el('div','');
+              cell.style.cssText = `flex:1;border:.75pt solid ${colors.line};border-radius:1px;display:flex;flex-direction:column;padding:${+(0.5*ds).toFixed(1)}mm;min-height:${+(4*ds).toFixed(1)}mm;`;
+              if(week === 0 && dow < firstDow || dayNum > daysInMonth){
+                cell.style.cssText += 'border-color:transparent;';
+              } else {
+                const num = el('span','',String(dayNum));
+                num.style.cssText = `font-size:${hdrFs}pt;color:${colors.dim};`;
+                cell.appendChild(num);
+                dayNum++;
+              }
+              row.appendChild(cell);
+            }
+            wrapper.appendChild(row);
+          }
+          break;
+        }
+        case 'legend': {
+          // Mood legend
+          const icoMM = +(4*ds).toFixed(1);
+          const gapMM = +(2*ds).toFixed(1);
+          const fsPt = +(3.5*ds).toFixed(1);
+          wrapper.style.cssText += `display:flex;justify-content:center;align-items:center;gap:${gapMM}mm;`;
+          const icons = (opts.moodfaces===3 ? MOOD_ICONS3 : MOOD_ICONS5);
+          const labels = opts.moodfaces===3 ? ['Bad','OK','Good'] : ['Awful','Bad','OK','Good','Great'];
+          icons.forEach((name, i) => {
+            const item = el('div','');
+            item.style.cssText = `display:flex;align-items:center;gap:${+(1*ds).toFixed(1)}mm;`;
+            const sp = el('span','');
+            sp.setAttribute('data-lucide', name);
+            sp.style.cssText = `width:${icoMM}mm;height:${icoMM}mm;display:block;color:${eColor||colors.dim};`;
+            item.appendChild(sp);
+            const lb = el('span','',labels[i]);
+            lb.style.cssText = `font-size:${fsPt}pt;color:${colors.dim};`;
+            item.appendChild(lb);
+            wrapper.appendChild(item);
+          });
+          break;
+        }
+        case 'table': {
+          // Expense table
+          const fsPt = +(4*ds).toFixed(1);
+          const hdrFs = +(3.5*ds).toFixed(1);
+          const cellPad = +(1*ds).toFixed(1);
+          const cols = ['Date','Description','Amount','Category'];
+          wrapper.style.cssText += `display:flex;flex-direction:column;font-size:${fsPt}pt;color:${eColor||colors.ink};`;
+
+          // Header row
+          const hdrRow = el('div','');
+          hdrRow.style.cssText = `display:flex;border-bottom:1pt solid ${colors.line};padding-bottom:${cellPad}mm;margin-bottom:${cellPad}mm;`;
+          cols.forEach((c,i) => {
+            const cell = el('div','',c);
+            cell.style.cssText = `flex:${i===1?2:1};font-size:${hdrFs}pt;font-weight:700;color:${colors.dim};text-transform:uppercase;`;
+            hdrRow.appendChild(cell);
+          });
+          wrapper.appendChild(hdrRow);
+
+          // Empty data rows
+          const elemH_mm = block.h * innerH_mm / 100;
+          const rowH = parseFloat(fsPt)*0.4 + parseFloat(cellPad)*2 + 1;
+          const maxRows = Math.max(1, Math.floor((elemH_mm - 4) / rowH));
+          for(let i = 0; i < maxRows; i++){
+            const row = el('div','');
+            row.style.cssText = `display:flex;border-bottom:.75pt solid ${colors.line};padding:${cellPad}mm 0;`;
+            cols.forEach((c,ci) => {
+              const cell = el('div','');
+              cell.style.cssText = `flex:${ci===1?2:1};height:${+(3*ds).toFixed(1)}mm;`;
+              row.appendChild(cell);
+            });
+            wrapper.appendChild(row);
+          }
+          break;
+        }
+        default: {
+          // Custom addable elements on non-daily pages (same rendering as daily default)
+          const ds2 = elemScale(block, innerW_mm, innerH_mm);
+          if(block.type === 'text' && block.content){
+            const tFs = block.fs > 0 ? +(block.fs*ds2).toFixed(1) : +(6*ds2).toFixed(1);
+            wrapper.style.cssText += `display:flex;align-items:center;color:${eColor||colors.ink};font-size:${tFs}pt;`;
+            if(block.font) wrapper.style.fontFamily = `'${block.font}', serif`;
+            wrapper.textContent = block.content;
+          } else if(block.type === 'separator'){
+            wrapper.style.cssText += `border-top:.75pt ${block.lineStyle||'solid'} ${eColor||colors.line};`;
+          } else if(block.type === 'fill'){
+            wrapper.style.cssText += getFillStyle(colors, block.fillPattern, opts.dotgrid);
+          } else if(block.type === 'field'){
+            const lblPt = +(4.5*ds2).toFixed(1);
+            const lineH = +(2.5*ds2).toFixed(1);
+            const gapMM = +(1*ds2).toFixed(1);
+            wrapper.style.cssText += `display:flex;align-items:baseline;gap:${gapMM}mm;`;
+            if(block.font) wrapper.style.fontFamily = `'${block.font}', serif`;
+            const lb2 = el('span','',block.fieldLabel||'Label');
+            lb2.style.cssText = `font-size:${lblPt}pt;text-transform:uppercase;color:${eColor||colors.dim};`;
+            wrapper.appendChild(lb2);
+            const ln2 = el('div','');
+            ln2.style.cssText = `flex:1;border-bottom:.75pt solid ${eColor||colors.dim};height:${lineH}mm;`;
+            wrapper.appendChild(ln2);
+          } else if(block.type === 'checkbox'){
+            const cbMM = +(5*ds2).toFixed(1);
+            const gapMM = +(2*ds2).toFixed(1);
+            const shape = opts.checkbox || 'square';
+            let radius = '0';
+            if(shape==='circle') radius = '50%';
+            else if(shape==='rounded') radius = '1.2mm';
+            let trfm = shape==='diamond' ? 'transform:rotate(45deg);' : '';
+            wrapper.style.cssText += `display:flex;align-items:center;gap:${gapMM}mm;flex-wrap:wrap;`;
+            for(let i = 0; i < (block.checkboxCount||1); i++){
+              const box = el('div','');
+              box.style.cssText = `border:1pt solid ${eColor||colors.dim};width:${cbMM}mm;height:${cbMM}mm;border-radius:${radius};${trfm}flex-shrink:0;`;
+              wrapper.appendChild(box);
+            }
+          } else if(block.type === 'icon'){
+            const icoMM = +(5*ds2).toFixed(1);
+            wrapper.style.cssText += `display:flex;align-items:center;justify-content:center;`;
+            const sp = el('span','');
+            sp.setAttribute('data-lucide', block.icon || 'star');
+            sp.style.cssText = `width:${icoMM}mm;height:${icoMM}mm;display:block;color:${ICON_COLORS[block.icon] || eColor || colors.dim};`;
+            wrapper.appendChild(sp);
+          } else if(block.type === 'mood'){
+            const icoMM = +(5*ds2).toFixed(1);
+            wrapper.style.cssText += `display:flex;justify-content:space-between;align-items:center;`;
+            const icons = (opts.moodfaces===3 ? MOOD_ICONS3 : MOOD_ICONS5);
+            icons.forEach(name => {
+              const sp = el('span','');
+              sp.setAttribute('data-lucide', name);
+              sp.style.cssText = `width:${icoMM}mm;height:${icoMM}mm;display:block;color:${eColor||colors.dim};`;
+              wrapper.appendChild(sp);
+            });
+          } else if(block.type === 'habits'){
+            const cbMM = +(5*ds2).toFixed(1);
+            const icoMM = +(3.5*ds2).toFixed(1);
+            const gapMM = +(1.5*ds2).toFixed(1);
+            const rowGap = +(2*ds2).toFixed(1);
+            const fsPt = +(6*ds2).toFixed(1);
+            const elemH_mm = block.h * innerH_mm / 100;
+            const rowH = parseFloat(cbMM) + parseFloat(gapMM);
+            const maxRows = Math.max(1, Math.floor(elemH_mm / rowH));
+            wrapper.style.cssText += `display:flex;flex-direction:column;gap:${gapMM}mm;overflow:hidden;font-size:${fsPt}pt;color:${eColor||colors.ink};`;
+            if(block.font) wrapper.style.fontFamily = `'${block.font}', serif`;
+            const shape = opts.checkbox || 'square';
+            let radius = '0';
+            if(shape==='circle') radius = '50%';
+            else if(shape==='rounded') radius = '1.2mm';
+            let trfm = shape==='diamond' ? 'transform:rotate(45deg);' : '';
+            habits.slice(0, maxRows).forEach(h => {
+              const row = el('div','');
+              row.style.cssText = `display:flex;align-items:center;gap:${rowGap}mm;`;
+              const box = el('div','');
+              box.style.cssText = `border:1pt solid ${eColor||colors.dim};width:${cbMM}mm;height:${cbMM}mm;border-radius:${radius};${trfm}flex-shrink:0;`;
+              row.appendChild(box);
+              const ico = el('span','');
+              ico.setAttribute('data-lucide', h.icon || 'star');
+              ico.style.cssText = `width:${icoMM}mm;height:${icoMM}mm;display:block;flex-shrink:0;color:${ICON_COLORS[h.icon] || eColor || colors.dim};`;
+              row.appendChild(ico);
+              row.appendChild(el('span','',h.name));
+              wrapper.appendChild(row);
+            });
+            const remaining = maxRows - Math.min(habits.length, maxRows);
+            for(let i = 0; i < remaining; i++){
+              const row = el('div','');
+              row.style.cssText = `display:flex;align-items:center;gap:${rowGap}mm;`;
+              const box = el('div','');
+              box.style.cssText = `border:1pt solid ${eColor||colors.dim};width:${cbMM}mm;height:${cbMM}mm;border-radius:${radius};${trfm}flex-shrink:0;`;
+              row.appendChild(box);
+              const line = el('div','');
+              line.style.cssText = `flex:1;border-bottom:.75pt solid ${eColor||colors.line};height:${cbMM}mm;`;
+              row.appendChild(line);
+              wrapper.appendChild(row);
+            }
+          } else if(block.type === 'date'){
+            const fsPt = block.fs > 0 ? +(block.fs*ds2).toFixed(1) : +(18*ds2).toFixed(1);
+            wrapper.style.cssText += `display:flex;align-items:center;justify-content:center;font-weight:700;font-size:${fsPt}pt;color:${eColor||colors.line};line-height:1;`;
+            if(block.font) wrapper.style.fontFamily = `'${block.font}', serif`;
+            wrapper.textContent = now.getDate();
+          } else if(block.type === 'moonPhase'){
+            const phase = getMoonPhase(y, m, now.getDate());
+            const icoMM = +(5*ds2).toFixed(1);
+            wrapper.style.cssText += `display:flex;align-items:center;justify-content:center;`;
+            wrapper.innerHTML = moonSVG(phase, icoMM+'mm', eColor||colors.dim);
+          } else if(block.type === 'image'){
+            wrapper.style.cssText += `display:flex;align-items:center;justify-content:center;`;
+            if(block.imageSrc){
+              const img = el('img','');
+              img.src = block.imageSrc;
+              img.style.cssText = 'width:100%;height:100%;object-fit:contain;';
+              wrapper.appendChild(img);
+            } else {
+              wrapper.style.cssText += `border:1px dashed ${colors.line};border-radius:2px;`;
+              const placeholder = el('span','','📷 No image');
+              placeholder.style.cssText = `font-size:${+(4*ds2).toFixed(1)}pt;color:${colors.dim};`;
+              wrapper.appendChild(placeholder);
+            }
+          } else if(block.type === 'weekNum'){
+            const fsPt = block.fs > 0 ? +(block.fs*ds2).toFixed(1) : +(6*ds2).toFixed(1);
+            wrapper.style.cssText += `display:flex;align-items:center;color:${eColor||colors.dim};font-size:${fsPt}pt;font-weight:700;text-transform:uppercase;letter-spacing:.05em;`;
+            if(block.font) wrapper.style.fontFamily = `'${block.font}', serif`;
+            wrapper.textContent = 'Week ' + getWeekNumber(now);
+          } else if(block.type === 'monthYear'){
+            const fsPt = block.fs > 0 ? +(block.fs*ds2).toFixed(1) : +(7*ds2).toFixed(1);
+            wrapper.style.cssText += `display:flex;align-items:center;color:${eColor||colors.dim};font-size:${fsPt}pt;font-weight:700;`;
+            if(block.font) wrapper.style.fontFamily = `'${block.font}', serif`;
+            wrapper.textContent = MONTHS[m] + ' ' + y;
+          } else {
+            // Unknown type: show label placeholder
+            wrapper.style.cssText += `border:1px dashed ${colors.line};border-radius:2px;display:flex;align-items:center;justify-content:center;`;
+            const lbl = el('span','',block.label);
+            lbl.style.cssText = `font-size:9px;color:${colors.dim};text-transform:uppercase;letter-spacing:.05em;`;
+            wrapper.appendChild(lbl);
+          }
+        }
+      }
       container.appendChild(wrapper);
     });
   }
@@ -829,6 +1433,104 @@ function selectBlock(id, additive){
   });
   renderProps();
   renderLayers();
+}
+
+function startInlineEdit(e, block, div){
+  e.preventDefault();
+  e.stopPropagation();
+  // Determine editable property
+  let prop = null, currentVal = '';
+  if(block.type === 'text' || block.id === 'dayName'){
+    prop = 'content'; currentVal = block.content || block.label || '';
+  } else if(block.type === 'field'){
+    prop = 'fieldLabel'; currentVal = block.fieldLabel || 'Label';
+  } else if(block.id === 'header'){
+    prop = 'label'; currentVal = block.label || '';
+  } else if(block.id === 'habits' || block.type === 'habits'){
+    // Inline editing for habits — styled rows matching real element
+    e.preventDefault(); e.stopPropagation();
+    const overlay = document.createElement('div');
+    overlay.style.cssText = `position:absolute;inset:0;width:100%;height:100%;background:rgba(255,255,255,.97);border:2px solid var(--acc2);border-radius:2px;padding:4px 6px;z-index:200;box-sizing:border-box;overflow-y:auto;display:flex;flex-direction:column;gap:3px;`;
+    const shape = opts.checkbox || 'square';
+    let rad = '0'; if(shape==='circle') rad = '50%'; else if(shape==='rounded') rad = '2px';
+    const boxCss = `width:14px;height:14px;border:1.5px solid #999;border-radius:${rad};flex-shrink:0;${shape==='diamond'?'transform:rotate(45deg);':''}`;
+    const inputs = [];
+    habits.forEach((h, i) => {
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:4px;';
+      const box = document.createElement('div');
+      box.style.cssText = boxCss;
+      row.appendChild(box);
+      const ico = document.createElement('span');
+      ico.setAttribute('data-lucide', h.icon || 'star');
+      ico.style.cssText = 'width:12px;height:12px;display:block;flex-shrink:0;color:#666;';
+      row.appendChild(ico);
+      const inp = document.createElement('input');
+      inp.type = 'text';
+      inp.value = h.name;
+      inp.style.cssText = 'flex:1;border:none;outline:none;background:transparent;font:inherit;font-size:11px;color:#1a1a2e;padding:1px 2px;min-width:0;';
+      inp.dataset.idx = i;
+      inputs.push(inp);
+      row.appendChild(inp);
+      overlay.appendChild(row);
+    });
+    div.style.overflow = 'visible';
+    div.appendChild(overlay);
+    try{ lucide.createIcons({attrs:{class:'inline-habit-ico'}, nameAttr:'data-lucide'}, overlay); }catch(e2){}
+    if(inputs.length) inputs[0].focus();
+    let done = false;
+    function finishHabits(){
+      if(done) return; done = true;
+      pushHistory();
+      inputs.forEach((inp, i) => {
+        const name = inp.value.trim();
+        if(i < habits.length && name) habits[i].name = name;
+      });
+      saveHabits();
+      overlay.remove();
+      div.style.overflow = '';
+      render(); saveToPlanner();
+    }
+    overlay.addEventListener('focusout', (ev) => {
+      // Only finish if focus leaves overlay entirely
+      setTimeout(() => { if(!overlay.contains(document.activeElement)) finishHabits(); }, 50);
+    });
+    overlay.addEventListener('keydown', ev => {
+      if(ev.key === 'Escape') finishHabits();
+      if(ev.key === 'Enter'){ ev.preventDefault(); finishHabits(); }
+    });
+    return;
+  } else {
+    return; // Not inline-editable
+  }
+
+  // Create overlay input
+  const input = document.createElement('textarea');
+  input.value = currentVal;
+  input.style.cssText = `position:absolute;inset:0;width:100%;height:100%;background:rgba(255,255,255,.95);border:2px solid var(--acc2);border-radius:2px;padding:4px;font-size:12px;font-family:inherit;resize:none;z-index:200;box-sizing:border-box;outline:none;color:#1a1a2e;`;
+  div.style.overflow = 'visible';
+  div.appendChild(input);
+  input.focus();
+  input.select();
+
+  function finish(){
+    const val = input.value.trim();
+    if(val && val !== currentVal){
+      pushHistory();
+      block[prop] = val;
+      if(prop === 'content' && block.type === 'text' && !block.content) block.content = val;
+    }
+    input.remove();
+    div.style.overflow = '';
+    render();
+    saveToPlanner();
+  }
+
+  input.addEventListener('blur', finish);
+  input.addEventListener('keydown', e => {
+    if(e.key === 'Enter' && !e.shiftKey){ e.preventDefault(); input.blur(); }
+    if(e.key === 'Escape'){ input.value = currentVal; input.blur(); }
+  });
 }
 
 function blockMouseDown(e, div){
@@ -880,6 +1582,40 @@ function blockMouseDown(e, div){
     if(block) startPositions[sid] = { x: block.x, y: block.y, w: block.w, h: block.h };
   });
 
+  // Rotation handle
+  if(handle === 'rotate'){
+    const block = elements[currentPage].find(b => b.id === id);
+    if(!block) return;
+    const divRect = div.getBoundingClientRect();
+    const centerX = divRect.left + divRect.width / 2;
+    const centerY = divRect.top + divRect.height / 2;
+    const startAngle = block.rotation || 0;
+    const startMouseAngle = Math.atan2(e.clientY - centerY, e.clientX - centerX) * 180 / Math.PI;
+
+    function onRotate(ev){
+      if(!moved){ moved = true; pushHistory(); }
+      const mouseAngle = Math.atan2(ev.clientY - centerY, ev.clientX - centerX) * 180 / Math.PI;
+      let angle = startAngle + (mouseAngle - startMouseAngle);
+      // Snap to 15° increments when shift held
+      if(ev.shiftKey) angle = Math.round(angle / 15) * 15;
+      // Normalize to 0-360
+      block.rotation = ((angle % 360) + 360) % 360;
+      if(Math.abs(block.rotation) < 1) block.rotation = 0;
+      div.style.transform = block.rotation ? `rotate(${block.rotation}deg)` : '';
+      renderProps();
+    }
+    function onRotateUp(){
+      document.removeEventListener('mousemove', onRotate);
+      document.removeEventListener('mouseup', onRotateUp);
+      dragging = false;
+      render(); saveToPlanner();
+    }
+    dragging = true;
+    document.addEventListener('mousemove', onRotate);
+    document.addEventListener('mouseup', onRotateUp);
+    return;
+  }
+
   function onMove(ev){
     const dx = (ev.clientX - startX) / rect.width * 100;
     const dy = (ev.clientY - startY) / rect.height * 100;
@@ -890,13 +1626,13 @@ function blockMouseDown(e, div){
     if(!moved) return;
 
     if(!handle){
-      // Move all selected
+      // Move all selected (free movement, no margin clamping)
       selectedIds.forEach(sid => {
         const block = elements[currentPage].find(b => b.id === sid);
         const start = startPositions[sid];
         if(!block || !start) return;
-        block.x = Math.max(0, Math.min(100 - block.w, start.x + dx / innerW * 100));
-        block.y = Math.max(0, Math.min(100 - block.h, start.y + dy / innerH * 100));
+        block.x = +(start.x + dx / innerW * 100).toFixed(1);
+        block.y = +(start.y + dy / innerH * 100).toFixed(1);
       });
     } else if(selectedIds.size === 1){
       // Resize single selected
@@ -910,15 +1646,27 @@ function blockMouseDown(e, div){
       if(handle.includes('w')){ l = start.x + dxP; w = Math.max(2, start.w - dxP); }
       if(handle.includes('s')) h = Math.max(1, start.h + dyP);
       if(handle.includes('n')){ t = start.y + dyP; h = Math.max(1, start.h - dyP); }
-      block.x = Math.max(0, l);
-      block.y = Math.max(0, t);
-      block.w = Math.min(100 - block.x, w);
-      block.h = Math.min(100 - block.y, h);
+      // Enforce min size for habits/checkbox elements (can't be smaller than checkbox)
+      if(block.type === 'habits' || block.id === 'habits'){
+        const cbSize_pct = 5 / (sz.h - 2*margin) * 100; // 5mm checkbox in percent
+        h = Math.max(cbSize_pct, h);
+      }
+      block.x = +l.toFixed(1);
+      block.y = +t.toFixed(1);
+      block.w = +w.toFixed(1);
+      block.h = +h.toFixed(1);
     }
 
     syncBlockPositions();
     showGuides(id);
     renderProps();
+    // Schedule throttled preview rebuild for real-time visual feedback
+    if(!_dragRAF){
+      _dragRAF = requestAnimationFrame(() => {
+        refreshPreview();
+        _dragRAF = null;
+      });
+    }
   }
 
   function onUp(){
@@ -926,8 +1674,11 @@ function blockMouseDown(e, div){
     document.removeEventListener('mouseup', onUp);
     hideGuides();
     dragging = false;
-    render();
-    saveToPlanner();
+    if(_dragRAF){ cancelAnimationFrame(_dragRAF); _dragRAF = null; }
+    if(moved){
+      render();
+      saveToPlanner();
+    }
   }
 
   dragging = true;
@@ -952,10 +1703,11 @@ function syncBlockPositions(){
     div.style.top = (padY + block.y * innerH / 100) + '%';
     div.style.width = (block.w * innerW / 100) + '%';
     div.style.height = (block.h * innerH / 100) + '%';
+    div.style.transform = block.rotation ? `rotate(${block.rotation}deg)` : '';
   });
 
   // Sync preview
-  const preview = wrap.querySelector('div[style*="pointer-events:none"]');
+  const preview = wrap.querySelector('[data-preview]');
   if(preview){
     const previewChildren = Array.from(preview.children);
     elems.forEach((block, i) => {
@@ -965,6 +1717,7 @@ function syncBlockPositions(){
       child.style.top = (padY + block.y * innerH / 100) + '%';
       child.style.width = (block.w * innerW / 100) + '%';
       child.style.height = (block.h * innerH / 100) + '%';
+      child.style.transform = block.rotation ? `rotate(${block.rotation}deg)` : '';
     });
   }
 }
@@ -1137,6 +1890,7 @@ function renderProps(){
     $('prop-w').value = block.w;
     $('prop-h').value = block.h;
     $('prop-fs').value = block.fs || 0;
+    $('prop-rot').value = block.rotation || 0;
     wireElemAppearance(block);
     renderTypeProps(block);
   } else {
@@ -1145,6 +1899,7 @@ function renderProps(){
     $('prop-w').value = '';
     $('prop-h').value = '';
     $('prop-fs').value = '';
+    $('prop-rot').value = '';
     $('type-props').innerHTML = '<span style="color:var(--dim);font-size:11px;">Multiple selected</span>';
   }
 }
@@ -1176,24 +1931,49 @@ function renderTypeProps(block){
   function optSave(prop, val){ opts[prop] = val; render(); saveToPlanner(); }
 
   // ── Habits ──
-  if(block.id === 'habits'){
+  if(block.id === 'habits' || (block.type === 'habits' && block.id !== 'habits')){
     tp.innerHTML = '<h3>Habits</h3>';
     const list = el('div','habit-list');
     habits.forEach((h, i) => {
       const item = el('div','habit-item');
-      const sel = document.createElement('select');
+      // Icon dropdown — same style as planner
+      const iconWrap = el('div','icon-picker-wrap');
+      const iconBtn = el('button','hab-icon-btn');
+      iconBtn.innerHTML = `<span data-lucide="${h.icon}" style="width:16px;height:16px;display:block;"></span>`;
+      iconBtn.title = h.icon;
+      const picker = el('div','icon-picker-grid');
       HABIT_ICONS.forEach(ic => {
-        const o = el('option','',ic);
-        o.value = ic;
-        if(ic === h.icon) o.selected = true;
-        sel.appendChild(o);
+        const opt = el('button',`icon-opt${ic===h.icon?' selected':''}`);
+        opt.title = ic;
+        opt.innerHTML = `<span data-lucide="${ic}" style="width:14px;height:14px;display:block;"></span>`;
+        opt.onclick = (e2) => { e2.stopPropagation(); pushHistory(); h.icon = ic; saveHabits(); render(); renderProps(); };
+        picker.appendChild(opt);
       });
-      sel.onchange = () => { pushHistory(); h.icon = sel.value; saveHabits(); render(); };
-      item.appendChild(sel);
+      iconBtn.onclick = (ev) => {
+        ev.stopPropagation();
+        // Close any other open pickers
+        document.querySelectorAll('.icon-picker-grid.open').forEach(g => { if(g !== picker) g.classList.remove('open'); });
+        picker.classList.toggle('open');
+        if(picker.classList.contains('open')){
+          // Position fixed relative to button
+          const br = iconBtn.getBoundingClientRect();
+          picker.style.left = br.left + 'px';
+          // Prefer above button; if not enough space, show below
+          if(br.top > 220){ picker.style.top = ''; picker.style.bottom = (window.innerHeight - br.top + 4) + 'px'; }
+          else { picker.style.bottom = ''; picker.style.top = (br.bottom + 4) + 'px'; }
+          // Close on outside click
+          const close = (e3) => { if(!picker.contains(e3.target) && e3.target !== iconBtn){ picker.classList.remove('open'); document.removeEventListener('pointerdown', close); }};
+          setTimeout(() => document.addEventListener('pointerdown', close), 0);
+        }
+      };
+      iconWrap.appendChild(iconBtn);
+      iconWrap.appendChild(picker);
+      item.appendChild(iconWrap);
       const inp = document.createElement('input');
       inp.type = 'text';
       inp.value = h.name || '';
       inp.placeholder = 'Habit name';
+      inp.style.flex = '1';
       inp.oninput = () => { h.name = inp.value; refreshPreview(); };
       inp.onchange = () => { pushHistory(); saveHabits(); render(); };
       item.appendChild(inp);
@@ -1203,11 +1983,12 @@ function renderTypeProps(block){
       list.appendChild(item);
     });
     tp.appendChild(list);
+    try{lucide.createIcons();}catch(e){}
     const addBtn = el('button','hab-add-btn','+ Add Habit');
     addBtn.onclick = () => { pushHistory(); habits.push({icon:'star', name:'New Habit', days:[0,1,2,3,4,5,6]}); saveHabits(); render(); };
     tp.appendChild(addBtn);
 
-    // Contextual: checkbox shape, color icons
+    // Contextual: checkbox shape, color icons, empty lines
     tp.appendChild(el('h3','','Style'));
     addSelect('Shape', 'ctx-checkbox',
       [{v:'square',l:'Square'},{v:'circle',l:'Circle'},{v:'rounded',l:'Rounded'},{v:'diamond',l:'Diamond'}],
@@ -1215,6 +1996,14 @@ function renderTypeProps(block){
       e => optSave('checkbox', e.target.value));
     addToggle('Color Icons', 'ctx-coloricons', opts.colorIcons !== false,
       e => optSave('colorIcons', e.target.checked));
+    addToggle('Empty Rows', 'ctx-emptyrows', opts.showEmptyRows !== false,
+      e => optSave('showEmptyRows', e.target.checked));
+    if(opts.showEmptyRows !== false){
+      const elRow = el('div','s-row');
+      elRow.innerHTML = `<label>Empty rows</label><input type="number" id="ctx-emptylines" value="${opts.emptyLines||0}" min="0" max="20" style="flex:1;">`;
+      tp.appendChild(elRow);
+      tp.querySelector('#ctx-emptylines').onchange = e => optSave('emptyLines', parseInt(e.target.value)||0);
+    }
     return;
   }
 
@@ -1356,19 +2145,60 @@ function renderTypeProps(block){
       opts.moodfaces || 5,
       e => { opts.moodfaces = parseInt(e.target.value); render(); saveToPlanner(); saveHabits(); });
   }
-  if(block.type === 'habits'){
-    // Custom added habits element (not the built-in one)
-    tp.innerHTML = '<h3>Habits</h3>';
-    addSelect('Shape', 'ctx-cbshape2',
-      [{v:'square',l:'Square'},{v:'circle',l:'Circle'},{v:'rounded',l:'Rounded'},{v:'diamond',l:'Diamond'}],
-      opts.checkbox || 'square',
-      e => optSave('checkbox', e.target.value));
+  // (habits type handled above in unified habits block)
+  if(block.type === 'date'){
+    tp.innerHTML = '<h3>Date</h3>';
+  }
+  if(block.type === 'moonPhase'){
+    tp.innerHTML = '<h3>Moon Phase</h3><p style="font-size:10px;color:var(--dim);">Shows current moon phase automatically.</p>';
+  }
+  if(block.type === 'weekNum'){
+    tp.innerHTML = '<h3>Week Number</h3><p style="font-size:10px;color:var(--dim);">Shows current week number.</p>';
+  }
+  if(block.type === 'monthYear'){
+    tp.innerHTML = '<h3>Month / Year</h3><p style="font-size:10px;color:var(--dim);">Shows current month and year.</p>';
+  }
+  if(block.type === 'image'){
+    tp.innerHTML = '<h3>Image</h3>';
+    const row = el('div','s-row');
+    const fileBtn = el('button','','Choose Image…');
+    fileBtn.style.cssText = 'font-size:11px;padding:3px 8px;cursor:pointer;';
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*';
+    fileInput.style.display = 'none';
+    fileBtn.onclick = () => fileInput.click();
+    fileInput.onchange = e => {
+      const file = e.target.files[0];
+      if(!file) return;
+      pushHistory();
+      block.imageFile = file.name;
+      const reader = new FileReader();
+      reader.onload = ev => {
+        block.imageSrc = ev.target.result;
+        render(); saveToPlanner();
+      };
+      reader.readAsDataURL(file);
+    };
+    row.appendChild(fileBtn);
+    tp.appendChild(row);
+    if(block.imageFile){
+      const info = el('p','',block.imageFile);
+      info.style.cssText = 'font-size:10px;color:var(--dim);margin-top:4px;word-break:break-all;';
+      tp.appendChild(info);
+    }
+    if(block.imageSrc){
+      const clearBtn = el('button','','Remove Image');
+      clearBtn.style.cssText = 'font-size:10px;padding:2px 6px;margin-top:4px;cursor:pointer;color:var(--err,#e05050);';
+      clearBtn.onclick = () => { pushHistory(); block.imageSrc = ''; block.imageFile = ''; render(); saveToPlanner(); };
+      tp.appendChild(clearBtn);
+    }
   }
 }
 
 // Wire prop inputs — debounced auto-save
 let _propSaveTimer = null;
-['prop-x','prop-y','prop-w','prop-h','prop-fs'].forEach(id => {
+['prop-x','prop-y','prop-w','prop-h','prop-fs','prop-rot'].forEach(id => {
   $(id).addEventListener('input', () => {
     if(selectedIds.size !== 1) return;
     const blockId = [...selectedIds][0];
@@ -1377,7 +2207,11 @@ let _propSaveTimer = null;
     pushHistory();
     const field = id.split('-')[1];
     const val = parseFloat($(id).value) || 0;
-    block[field] = field === 'fs' ? val : Math.max(0, Math.min(100, val));
+    if(field === 'rot'){
+      block.rotation = ((val % 360) + 360) % 360;
+    } else {
+      block[field] = field === 'fs' ? val : Math.max(0, Math.min(100, val));
+    }
     render();
     clearTimeout(_propSaveTimer);
     _propSaveTimer = setTimeout(() => saveToPlanner(), 300);
@@ -1623,6 +2457,16 @@ $('theme-sel').onchange = () => {
 
 $('zoom-in').onclick = () => { zoom = Math.min(8, zoom + 0.5); $('zoom-display').textContent = Math.round(zoom*100)+'%'; render(); };
 $('zoom-out').onclick = () => { zoom = Math.max(1.5, zoom - 0.5); $('zoom-display').textContent = Math.round(zoom*100)+'%'; render(); };
+
+// Ctrl+mousewheel zoom
+$('canvas-area').addEventListener('wheel', e => {
+  if(!e.ctrlKey) return;
+  e.preventDefault();
+  const step = e.deltaY > 0 ? -0.25 : 0.25;
+  zoom = Math.max(1.5, Math.min(8, zoom + step));
+  $('zoom-display').textContent = Math.round(zoom*100)+'%';
+  render();
+}, { passive: false });
 $('undo-btn').onclick = undo;
 $('redo-btn').onclick = redo;
 $('save-btn').onclick = () => { saveToPlanner(); $('save-btn').textContent = 'Saved!'; setTimeout(() => $('save-btn').textContent = 'Save', 1500); };
@@ -1655,6 +2499,14 @@ function init(){
 
   // Init global props panel
   initGlobalProps();
+
+  // Delegated dblclick for inline editing (survives render DOM rebuilds)
+  $('canvas-wrap').addEventListener('dblclick', e => {
+    const edBlock = e.target.closest('.ed-block');
+    if(!edBlock) return;
+    const block = elements[currentPage].find(b => b.id === edBlock.dataset.id);
+    if(block) startInlineEdit(e, block, edBlock);
+  });
 
   // Initial history
   history = [JSON.stringify(elements[currentPage])];
