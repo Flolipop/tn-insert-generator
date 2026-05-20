@@ -1,0 +1,1842 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>TN Canvas Editor</title>
+<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+<style>
+:root{
+  --ink:#1a1a2e;--dim:#7a7870;--bg:#ede9e2;--page:#fffdf8;--dot:#c5c2bb;--line:#ddd9d3;--acc:#4a4262;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+button,input,select,textarea{font-family:inherit;}
+body{font-family:'Georgia',serif;background:var(--bg);color:var(--ink);display:flex;height:100vh;overflow:hidden;}
+
+/* ── SIDEBAR ── */
+#cfg{background:var(--acc);color:#f0ede6;border-right:3px solid #2a2240;width:300px;min-width:280px;height:100vh;overflow-y:auto;padding:12px 14px 16px;display:flex;flex-direction:column;gap:4px;flex-shrink:0;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.2) transparent;}
+#cfg::-webkit-scrollbar{width:6px;}
+#cfg::-webkit-scrollbar-thumb{background:rgba(255,255,255,.2);border-radius:3px;}
+
+/* ── COLLAPSIBLE SECTIONS ── */
+.coll-sec{border:1px solid rgba(255,255,255,.1);border-radius:5px;background:rgba(0,0,0,.12);}
+.coll-hdr{display:flex;align-items:center;gap:8px;padding:8px 11px;cursor:pointer;user-select:none;font-size:12px;font-weight:700;letter-spacing:.04em;transition:background .15s;}
+.coll-hdr:hover{background:rgba(255,255,255,.06);}
+.coll-hdr .arr{font-size:9px;transition:transform .2s;flex-shrink:0;opacity:.5;}
+.coll-hdr.open .arr{transform:rotate(90deg);}
+.coll-body{display:none;padding:10px 11px 12px;border-top:1px solid rgba(255,255,255,.08);}
+.coll-body.open{display:block;}
+
+/* ── FORM ELEMENTS ── */
+.cfg-sec{display:flex;flex-direction:column;gap:6px;}
+.cfg-sec h3{font-size:10px;text-transform:uppercase;letter-spacing:.12em;opacity:.6;margin-bottom:1px;}
+.cfg-row{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.cfg-row label{font-size:11px;min-width:80px;opacity:.8;}
+.cfg-row.stacked{flex-direction:column;align-items:flex-start;gap:3px;}
+.cfg-row.stacked label{min-width:auto;}
+input[type=text],input[type=number],select,textarea{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.25);color:#f0ede6;padding:4px 7px;border-radius:3px;font-size:11px;}
+textarea{resize:vertical;min-height:36px;}
+input[type=color]{width:28px;height:24px;border:1px solid rgba(255,255,255,.25);border-radius:3px;padding:1px;background:rgba(255,255,255,.1);cursor:pointer;}
+select option{background:var(--acc);color:#f0ede6;}
+input::placeholder,textarea::placeholder{color:rgba(255,255,255,.35);}
+.btn{padding:5px 12px;border:none;border-radius:3px;cursor:pointer;font-size:11px;transition:opacity .15s;}
+.btn:hover{opacity:.85;}
+.btn-p{background:#f0ede6;color:var(--acc);font-weight:700;}
+.btn-s{background:rgba(255,255,255,.15);color:#f0ede6;border:1px solid rgba(255,255,255,.2);}
+.btn-d{background:rgba(255,80,80,.25);color:#ffc0c0;font-size:10px;padding:2px 6px;}
+.btn-sm{font-size:10px;padding:3px 8px;}
+.color-row{display:flex;align-items:center;gap:6px;font-size:11px;}
+.color-row label{min-width:60px;opacity:.7;font-size:10px;}
+.toggle-row{display:flex;align-items:center;gap:8px;font-size:11px;}
+.toggle-sw{position:relative;width:32px;height:17px;flex-shrink:0;}
+.toggle-sw input{opacity:0;width:0;height:0;}
+.toggle-sw .slider{position:absolute;inset:0;background:rgba(255,255,255,.15);border-radius:9px;cursor:pointer;transition:.2s;}
+.toggle-sw .slider::before{content:'';position:absolute;width:13px;height:13px;left:2px;bottom:2px;background:#f0ede6;border-radius:50%;transition:.2s;}
+.toggle-sw input:checked+.slider{background:rgba(100,200,130,.5);}
+.toggle-sw input:checked+.slider::before{transform:translateX(15px);}
+
+/* ── THEME GRID ── */
+.theme-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;}
+.theme-btn{padding:5px 4px;border-radius:4px;border:1px solid rgba(255,255,255,.15);background:rgba(255,255,255,.06);color:#f0ede6;cursor:pointer;font-size:9px;text-align:center;transition:all .15s;}
+.theme-btn:hover{background:rgba(255,255,255,.14);}
+.theme-btn.active{border-color:rgba(255,255,255,.5);background:rgba(255,255,255,.18);}
+.theme-swatch{display:flex;gap:2px;justify-content:center;margin-bottom:2px;}
+.theme-swatch span{width:7px;height:7px;border-radius:2px;display:block;}
+
+/* ── PALETTE ── */
+.pal-group{margin-bottom:8px;}
+.pal-group-label{font-size:9px;text-transform:uppercase;letter-spacing:.1em;opacity:.5;margin-bottom:4px;display:block;}
+.pal-row{display:flex;flex-wrap:wrap;gap:4px;}
+.pal-btn{width:32px;height:32px;border:1px solid rgba(255,255,255,.2);border-radius:4px;background:rgba(255,255,255,.1);color:#f0ede6;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .15s;padding:0;flex-shrink:0;}
+.pal-btn:hover{background:rgba(255,255,255,.25);border-color:rgba(255,255,255,.4);}
+.pal-btn svg{width:14px;height:14px;stroke:#f0ede6;}
+
+/* ── CANVAS AREA ── */
+#canvas-area{flex:1;display:flex;flex-direction:column;min-width:0;height:100vh;}
+
+/* ── TOOLBAR ── */
+#canvas-toolbar{background:#f5f1eb;border-bottom:1px solid #d8d4ce;padding:8px 16px;display:flex;align-items:center;gap:10px;flex-shrink:0;flex-wrap:wrap;}
+#canvas-toolbar .tb-group{display:flex;align-items:center;gap:4px;}
+#canvas-toolbar .tb-sep{width:1px;height:20px;background:#ccc;margin:0 4px;}
+.tb-btn{padding:5px 10px;border:1px solid #ccc;border-radius:4px;background:white;color:var(--ink);cursor:pointer;font-size:11px;display:flex;align-items:center;gap:5px;transition:all .15s;}
+.tb-btn:hover{background:#ede9e2;border-color:#aaa;}
+.tb-btn svg{width:13px;height:13px;stroke:var(--ink);}
+.tb-btn.primary{background:var(--acc);color:#f0ede6;border-color:var(--acc);}
+.tb-btn.primary:hover{opacity:.88;}
+#zoom-val{font-size:11px;min-width:36px;text-align:center;font-weight:600;}
+
+/* ── CANVAS STAGE ── */
+#canvas-stage{flex:1;overflow:auto;background:#d0ccc4;background-image:radial-gradient(circle,#b8b4ae 1px,transparent 1px);background-size:20px 20px;position:relative;display:flex;justify-content:flex-start;align-items:flex-start;}
+#canvas-stage-inner{padding:40px;position:relative;}
+
+/* ── PAGE OUTER ── */
+#pg-outer{position:relative;flex-shrink:0;}
+#pg{background:#fff;position:relative;box-shadow:0 2px 20px rgba(0,0,0,.25);overflow:hidden;}
+#pg::after{content:'';position:absolute;inset:0;pointer-events:none;}
+
+/* ── CANVAS ELEMENT ── */
+.canvas-el{position:absolute;cursor:default;user-select:none;}
+.canvas-el:hover:not(.sel-active){outline:1.5px dashed rgba(74,66,98,.3);}
+
+/* ── SELECTION OVERLAY ── */
+#sel-overlay{display:none;position:absolute;box-sizing:border-box;border:1.5px solid #4a90d9;z-index:500;pointer-events:all;}
+#sel-overlay.locked{border-color:#aaa;cursor:not-allowed;}
+.sel-handle{position:absolute;width:9px;height:9px;background:white;border:1.5px solid #4a90d9;border-radius:2px;pointer-events:all;}
+.sel-handle.nw{top:-5px;left:-5px;cursor:nwse-resize;}
+.sel-handle.n {top:-5px;left:calc(50% - 4px);cursor:ns-resize;}
+.sel-handle.ne{top:-5px;right:-5px;cursor:nesw-resize;}
+.sel-handle.w {top:calc(50% - 4px);left:-5px;cursor:ew-resize;}
+.sel-handle.e {top:calc(50% - 4px);right:-5px;cursor:ew-resize;}
+.sel-handle.sw{bottom:-5px;left:-5px;cursor:nesw-resize;}
+.sel-handle.s {bottom:-5px;left:calc(50% - 4px);cursor:ns-resize;}
+.sel-handle.se{bottom:-5px;right:-5px;cursor:nwse-resize;}
+#sel-overlay .sel-type-badge{position:absolute;top:-18px;left:0;font-size:9px;background:#4a90d9;color:white;padding:1px 5px;border-radius:2px;white-space:nowrap;pointer-events:none;font-family:monospace;}
+
+/* ── PROPS PANEL ── */
+#props-body{font-size:11px;}
+#props-body .cfg-sec{gap:4px;}
+#props-body h3{margin-top:2px;}
+
+/* ── PRINT ── */
+#print-area{display:none;}
+@media print{
+  #cfg,#canvas-toolbar,#canvas-stage-inner{display:none!important;}
+  body{background:white;display:block;height:auto;overflow:visible;}
+  #canvas-area{display:block;height:auto;}
+  #print-area{display:flex!important;flex-direction:column;gap:0;}
+  .print-sheet{background:white;width:297mm;height:210mm;position:relative;page-break-after:always;break-after:page;}
+  .print-spread{position:absolute;top:43mm;left:59.5mm;display:flex;}
+  .print-pg{background:white;position:relative;overflow:hidden;}
+  *{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
+  @page{size:A4 landscape;margin:0;}
+}
+</style>
+</head>
+<body>
+
+<!-- ══ SIDEBAR ══ -->
+<div id="cfg">
+
+  <!-- Page Settings -->
+  <div class="coll-sec" id="sec-page">
+    <div class="coll-hdr open" onclick="toggleSec('sec-page')">
+      <span class="arr">&#9654;</span> Page Settings
+    </div>
+    <div class="coll-body open">
+      <div class="cfg-sec">
+        <div class="cfg-row">
+          <label>TN Size</label>
+          <select id="opt-tnsize" onchange="onTnSizeChange(this.value)" style="flex:1;">
+            <option value="passport">Passport (89×124mm)</option>
+            <option value="b6slim">B6 Slim (91×182mm)</option>
+            <option value="personal">Personal (95×171mm)</option>
+            <option value="a5slim">A5 Slim (105×210mm)</option>
+            <option value="regular">Regular (110×210mm)</option>
+            <option value="custom">Custom...</option>
+          </select>
+        </div>
+        <div class="cfg-row" id="custom-tn-row" style="display:none;gap:4px;">
+          <label>W×H (mm)</label>
+          <input type="number" id="opt-custom-tn-w" value="89" min="40" max="300" style="width:55px;" onchange="onCustomSizeChange()">
+          <span style="opacity:.5;">×</span>
+          <input type="number" id="opt-custom-tn-h" value="124" min="60" max="400" style="width:55px;" onchange="onCustomSizeChange()">
+        </div>
+        <div style="margin-top:4px;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;opacity:.6;margin-bottom:4px;">Month / Year</div>
+          <div style="display:flex;gap:5px;">
+            <select id="sel-m" onchange="onMonthChange()" style="flex:1;">
+              <option value="0">January</option><option value="1">February</option><option value="2">March</option><option value="3">April</option><option value="4">May</option><option value="5">June</option><option value="6">July</option><option value="7">August</option><option value="8">September</option><option value="9">October</option><option value="10">November</option><option value="11">December</option>
+            </select>
+            <input id="sel-y" type="number" value="2026" min="2020" max="2099" style="width:62px;" onchange="onMonthChange()">
+          </div>
+        </div>
+        <div style="margin-top:6px;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;opacity:.6;margin-bottom:4px;">Theme</div>
+          <div class="theme-grid" id="theme-grid"></div>
+        </div>
+        <div style="margin-top:6px;">
+          <div style="font-size:10px;text-transform:uppercase;letter-spacing:.1em;opacity:.6;margin-bottom:4px;">Font</div>
+          <select id="opt-font" onchange="onFontChange(this.value)" style="width:100%;">
+            <option value="Georgia">Georgia</option>
+            <option value="Garamond">Garamond</option>
+            <option value="Palatino">Palatino</option>
+            <option value="Helvetica">Helvetica</option>
+            <option value="Inter">Inter</option>
+            <option value="Courier New">Courier New</option>
+          </select>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Element Palette -->
+  <div class="coll-sec" id="sec-palette">
+    <div class="coll-hdr open" onclick="toggleSec('sec-palette')">
+      <span class="arr">&#9654;</span> Elements
+    </div>
+    <div class="coll-body open">
+      <div class="pal-group">
+        <span class="pal-group-label">Basics</span>
+        <div class="pal-row">
+          <button class="pal-btn" onclick="addElement('text')" title="Text"><span data-lucide="type"></span></button>
+          <button class="pal-btn" onclick="addElement('separator')" title="Separator"><span data-lucide="minus"></span></button>
+          <button class="pal-btn" onclick="addElement('checkbox')" title="Checkbox"><span data-lucide="square"></span></button>
+          <button class="pal-btn" onclick="addElement('icon')" title="Icon"><span data-lucide="star"></span></button>
+          <button class="pal-btn" onclick="addElement('fill')" title="Fill Area"><span data-lucide="grid-3x3"></span></button>
+          <button class="pal-btn" onclick="addElement('image')" title="Image"><span data-lucide="image"></span></button>
+          <button class="pal-btn" onclick="addElement('field')" title="Field"><span data-lucide="underline"></span></button>
+        </div>
+      </div>
+      <div class="pal-group">
+        <span class="pal-group-label">Date &amp; Time</span>
+        <div class="pal-row">
+          <button class="pal-btn" onclick="addElement('dateNum')" title="Day Number"><span data-lucide="hash"></span></button>
+          <button class="pal-btn" onclick="addElement('dayName')" title="Day Name"><span data-lucide="calendar-days"></span></button>
+          <button class="pal-btn" onclick="addElement('weekNum')" title="Week Number"><span data-lucide="calendar-range"></span></button>
+          <button class="pal-btn" onclick="addElement('monthYear')" title="Month / Year"><span data-lucide="calendar"></span></button>
+          <button class="pal-btn" onclick="addElement('moonPhase')" title="Moon Phase"><span data-lucide="moon"></span></button>
+          <button class="pal-btn" onclick="addElement('zodiac')" title="Zodiac"><span data-lucide="sparkles"></span></button>
+        </div>
+      </div>
+      <div class="pal-group">
+        <span class="pal-group-label">Wellness</span>
+        <div class="pal-row">
+          <button class="pal-btn" onclick="addElement('mood')" title="Mood"><span data-lucide="smile"></span></button>
+          <button class="pal-btn" onclick="addElement('energy')" title="Energy"><span data-lucide="zap"></span></button>
+          <button class="pal-btn" onclick="addElement('water')" title="Water"><span data-lucide="droplets"></span></button>
+          <button class="pal-btn" onclick="addElement('sleep')" title="Sleep"><span data-lucide="moon-star"></span></button>
+          <button class="pal-btn" onclick="addElement('weather')" title="Weather"><span data-lucide="sun"></span></button>
+        </div>
+      </div>
+      <div class="pal-group">
+        <span class="pal-group-label">Reflection</span>
+        <div class="pal-row">
+          <button class="pal-btn" onclick="addElement('goal')" title="Goal"><span data-lucide="target"></span></button>
+          <button class="pal-btn" onclick="addElement('gratitude')" title="Gratitude"><span data-lucide="heart"></span></button>
+          <button class="pal-btn" onclick="addElement('win')" title="Win"><span data-lucide="trophy"></span></button>
+          <button class="pal-btn" onclick="addElement('priority')" title="Priority List"><span data-lucide="list-ordered"></span></button>
+          <button class="pal-btn" onclick="addElement('habits')" title="Habits"><span data-lucide="check-square-2"></span></button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Properties -->
+  <div class="coll-sec" id="sec-props">
+    <div class="coll-hdr open" onclick="toggleSec('sec-props')">
+      <span class="arr">&#9654;</span> Properties
+    </div>
+    <div class="coll-body open">
+      <div id="props-body">
+        <div style="font-size:10px;opacity:.45;padding:4px 0;">Select an element to edit its properties.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Actions -->
+  <div style="margin-top:auto;padding-top:10px;display:flex;flex-direction:column;gap:5px;border-top:1px solid rgba(255,255,255,.1);">
+    <button class="btn btn-p" onclick="doPrint()">Print / PDF</button>
+    <div style="display:flex;gap:5px;">
+      <button class="btn btn-s btn-sm" style="flex:1;" onclick="exportLayout()">Export JSON</button>
+      <button class="btn btn-s btn-sm" style="flex:1;" onclick="document.getElementById('import-file').click()">Import JSON</button>
+    </div>
+    <input type="file" id="import-file" accept=".json" style="display:none" onchange="importLayout(event)">
+    <button class="btn btn-d btn-sm" onclick="clearPage()">Clear Page</button>
+  </div>
+</div>
+
+<!-- ══ CANVAS AREA ══ -->
+<div id="canvas-area">
+
+  <!-- Toolbar -->
+  <div id="canvas-toolbar">
+    <div class="tb-group">
+      <button class="tb-btn" onclick="undo()" title="Undo (Ctrl+Z)">
+        <span data-lucide="undo-2"></span> Undo
+      </button>
+      <button class="tb-btn" onclick="redo()" title="Redo (Ctrl+Y)">
+        <span data-lucide="redo-2"></span> Redo
+      </button>
+    </div>
+    <div class="tb-sep"></div>
+    <div class="tb-group">
+      <button class="tb-btn" onclick="zoomOut()" title="Zoom out">
+        <span data-lucide="zoom-out"></span>
+      </button>
+      <span id="zoom-val">250%</span>
+      <button class="tb-btn" onclick="zoomIn()" title="Zoom in">
+        <span data-lucide="zoom-in"></span>
+      </button>
+      <button class="tb-btn btn-sm" onclick="setZoom(1)" title="100%">1×</button>
+      <button class="tb-btn btn-sm" onclick="setZoom(2.5)" title="250%">2.5×</button>
+    </div>
+    <div class="tb-sep"></div>
+    <div class="tb-group" id="sel-toolbar" style="display:none;">
+      <button class="tb-btn" onclick="duplicateSelected()" title="Duplicate (Ctrl+D)">
+        <span data-lucide="copy"></span>
+      </button>
+      <button class="tb-btn" onclick="bringToFront()" title="Bring to front">
+        <span data-lucide="bring-to-front"></span>
+      </button>
+      <button class="tb-btn" onclick="sendToBack()" title="Send to back">
+        <span data-lucide="send-to-back"></span>
+      </button>
+      <button class="tb-btn" onclick="deleteSelected()" title="Delete (Del)" style="color:#c44;">
+        <span data-lucide="trash-2"></span>
+      </button>
+    </div>
+    <div class="tb-sep" id="sel-sep" style="display:none;"></div>
+    <div class="tb-group" style="margin-left:auto;">
+      <button class="tb-btn primary" onclick="doPrint()">
+        <span data-lucide="printer"></span> Print / PDF
+      </button>
+    </div>
+  </div>
+
+  <!-- Stage -->
+  <div id="canvas-stage">
+    <div id="canvas-stage-inner">
+      <div id="pg-outer">
+        <div id="pg"></div>
+        <svg id="guides-svg" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:450;overflow:visible;"></svg>
+        <div id="sel-overlay">
+          <div class="sel-type-badge" id="sel-badge"></div>
+          <div class="sel-handle nw" data-dir="nw"></div>
+          <div class="sel-handle n"  data-dir="n"></div>
+          <div class="sel-handle ne" data-dir="ne"></div>
+          <div class="sel-handle w"  data-dir="w"></div>
+          <div class="sel-handle e"  data-dir="e"></div>
+          <div class="sel-handle sw" data-dir="sw"></div>
+          <div class="sel-handle s"  data-dir="s"></div>
+          <div class="sel-handle se" data-dir="se"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Print area -->
+<div id="print-area"></div>
+
+<script>
+'use strict';
+
+// ── Constants ──────────────────────────────────────────────────────────────
+const PX_PER_MM = 96 / 25.4;
+
+const THEMES = {
+  'Classic Warm':  {ink:'#1a1a2e',dim:'#7a7870',bg:'#ede9e2',page:'#ffffff',dot:'#c5c2bb',line:'#ddd9d3',acc:'#4a4262'},
+  'Cool Gray':     {ink:'#2c2c34',dim:'#8a8a96',bg:'#e8eaed',page:'#ffffff',dot:'#c4c6cc',line:'#d8dae0',acc:'#4a5568'},
+  'Midnight Blue': {ink:'#0f172a',dim:'#64748b',bg:'#e2e8f0',page:'#ffffff',dot:'#b0b8c8',line:'#cbd5e1',acc:'#1e3a5f'},
+  'Forest':        {ink:'#1a2e1a',dim:'#6b7a65',bg:'#e6ece2',page:'#ffffff',dot:'#b5c4ab',line:'#d0dcc8',acc:'#2d5a2d'},
+  'Rose':          {ink:'#2e1a22',dim:'#8a7078',bg:'#f0e6ea',page:'#ffffff',dot:'#d4b8c2',line:'#e4d0d8',acc:'#6b3a50'},
+  'Minimal B&W':   {ink:'#111111',dim:'#888888',bg:'#f0f0f0',page:'#ffffff',dot:'#cccccc',line:'#dddddd',acc:'#333333'},
+};
+
+const TN_SIZES = {
+  passport: {w:89,  h:124},
+  b6slim:   {w:91,  h:182},
+  personal: {w:95,  h:171},
+  a5slim:   {w:105, h:210},
+  regular:  {w:110, h:210},
+};
+
+const AUTO_H = new Set(['goal','gratitude','win','priority']);
+const ICON_BEARING = new Set(['icon','mood','energy','water','sleep','weather','zodiac','moonPhase','habits','checkbox']);
+
+const ICON_LIST = [
+  'star','heart','zap','check','circle','square','bookmark','flag','award','target','trophy',
+  'sun','moon','cloud','droplet','flame','leaf','music','bell','camera','clock','coffee',
+  'compass','edit','eye','gift','globe','home','key','layers','link','lock','mail','map',
+  'mic','phone','map-pin','printer','search','settings','shield','shopping-bag','smile','tag',
+  'thumbs-up','trash','upload','user','wifi','wind','activity','anchor','bar-chart','battery',
+  'book','box','briefcase','bus','car','code','cpu','database','dollar-sign','feather',
+  'fish','hash','headphones','help-circle','inbox','info','mountain','package','paperclip',
+  'pen-tool','percent','pie-chart','power','repeat','scissors','send','sliders','terminal',
+  'thermometer','toggle-left','umbrella','video','voicemail','watch','x','alert-circle',
+];
+
+const MOOD_ICONS = {
+  3: ['frown','meh','smile'],
+  5: ['angry','frown','meh','smile','laugh'],
+};
+
+// ── State ──────────────────────────────────────────────────────────────────
+const S = {
+  elements:  [],
+  selected:  null,
+  zoom:      2.5,
+  tnW:       89,
+  tnH:       124,
+  history:   [],
+  histIdx:   -1,
+  month:     new Date().getMonth(),
+  year:      new Date().getFullYear(),
+  theme:     'Classic Warm',
+  font:      'Georgia',
+};
+
+// ── Defaults ───────────────────────────────────────────────────────────────
+const DEFAULTS = {
+  text:        {content:'Text', fontSize:8, bold:false, italic:false, color:'', align:'left', vAlign:'top'},
+  separator:   {style:'solid', color:'', thickness:0.3},
+  checkbox:    {count:5, shape:'square', size:5, label:'', strokeWidth:1.5, orientation:'horizontal'},
+  icon:        {name:'star', size:8, color:'', strokeWidth:1.5},
+  fill:        {pattern:'dots', spacing:5, dotColor:''},
+  image:       {src:'', fit:'contain'},
+  field:       {label:'Label', lines:1, lineSpacing:5},
+  dateNum:     {fontSize:18, color:''},
+  dayName:     {fontSize:8, color:'', textCase:'upper'},
+  weekNum:     {fontSize:8, prefix:'Week ', color:''},
+  monthYear:   {fontSize:8, format:'long', color:''},
+  moonPhase:   {size:10, color:'', strokeWidth:1.5},
+  zodiac:      {size:7, color:'', showLabel:true, iconSpacing:2, strokeWidth:1.5},
+  mood:        {count:5, iconSpacing:2, strokeWidth:1.5},
+  energy:      {count:5, iconSpacing:2, strokeWidth:1.5},
+  water:       {count:8, iconSpacing:1.5, strokeWidth:1.5},
+  sleep:       {count:8, iconSpacing:1.5, strokeWidth:1.5},
+  weather:     {icon:'sun', iconSpacing:2, strokeWidth:1.5, color:''},
+  goal:        {label:'Goal', lines:3, lineSpacing:5},
+  gratitude:   {label:'Grateful for', lines:3, lineSpacing:5},
+  win:         {label:'Win of the day', lines:2, lineSpacing:5},
+  priority:    {count:3, label:'Priorities', cbShape:'square'},
+  habits:      {items:[{icon:'star',name:'Habit'}], cbShape:'square', iconSpacing:2, strokeWidth:1.5},
+  dailyFields: {items:[{label:'Steps'},{label:'Wt'}]},
+  notes:       {pattern:'dots', spacing:5, color:''},
+};
+
+const DEFAULT_SIZES = {
+  text:        {w:40, h:8},
+  separator:   {w:77, h:3},
+  checkbox:    {w:45, h:6},
+  icon:        {w:10, h:10},
+  fill:        {w:77, h:40},
+  image:       {w:40, h:30},
+  field:       {w:50, h:8},
+  dateNum:     {w:20, h:15},
+  dayName:     {w:30, h:8},
+  weekNum:     {w:30, h:8},
+  monthYear:   {w:40, h:8},
+  moonPhase:   {w:12, h:12},
+  zodiac:      {w:28, h:8},
+  mood:        {w:45, h:8},
+  energy:      {w:38, h:6},
+  water:       {w:50, h:6},
+  sleep:       {w:38, h:6},
+  weather:     {w:12, h:12},
+  goal:        {w:77, h:0},
+  gratitude:   {w:77, h:0},
+  win:         {w:77, h:0},
+  priority:    {w:77, h:0},
+  habits:      {w:77, h:20},
+  dailyFields: {w:77, h:15},
+  notes:       {w:77, h:40},
+};
+
+// ── Auto-height ────────────────────────────────────────────────────────────
+function computeAutoH(el) {
+  const c = el.config;
+  const HDR = 5.5;
+  switch (el.type) {
+    case 'goal':
+    case 'gratitude':
+    case 'win':      return HDR + (c.lines||3) * (c.lineSpacing||5);
+    case 'priority': return HDR + (c.count||3) * 6.5;
+  }
+  return el.h;
+}
+
+// ── Lucide inline SVG ──────────────────────────────────────────────────────
+function lucideIcon(name, sizeMm, sw, color) {
+  const sz = sizeMm || 5;
+  const col = color || 'var(--pg-ink, #1a1a2e)';
+  const safeName = String(name||'star').toLowerCase().replace(/[^a-z0-9-]/g,'');
+  return `<span class="li-w" data-sw="${sw||1.5}" style="display:inline-flex;width:${sz}mm;height:${sz}mm;color:${col};align-items:center;justify-content:center;flex-shrink:0;vertical-align:middle;"><i data-lucide="${safeName}"></i></span>`;
+}
+
+function refreshIcons() {
+  if (!window.lucide || !window.lucide.createIcons) return;
+  try { window.lucide.createIcons(); } catch(e) {}
+  document.querySelectorAll('.li-w > svg').forEach(svg => {
+    svg.style.width = '100%';
+    svg.style.height = '100%';
+    svg.style.display = 'block';
+    const host = svg.parentElement;
+    if (host && host.dataset && host.dataset.sw) svg.setAttribute('stroke-width', host.dataset.sw);
+  });
+}
+
+// ── Text measurement ──────────────────────────────────────────────────────
+const _measCanvas = document.createElement('canvas');
+const _measCtx = _measCanvas.getContext('2d');
+
+function fitFontSize(text, fontFamily, weight, maxWmm, maxHmm, letterSpacingEm) {
+  if (!text) return 8;
+  const family = `'${fontFamily||'Georgia'}', serif`;
+  _measCtx.font = `${weight||400} 100pt ${family}`;
+  let widthPx = _measCtx.measureText(text).width;
+  if (letterSpacingEm) widthPx += letterSpacingEm * 100 * 1.3333 * Math.max(text.length - 1, 0);
+  const targetPx = maxWmm * 3.7795 * 0.96;
+  const wFs = widthPx > 0 ? (targetPx / widthPx) * 100 : 100;
+  const hFs = maxHmm * 2.5;
+  return Math.max(4, Math.min(wFs, hFs));
+}
+
+// ── Moon phase SVG ─────────────────────────────────────────────────────────
+function moonPhaseSVG(year, month, day, sizeMm, color) {
+  const ref = new Date(2000, 0, 6);
+  const days = (new Date(year, month, day) - ref) / 86400000;
+  const phase = ((days % 29.53) + 29.53) % 29.53;
+  const frac = phase / 29.53;
+  const col = color || 'currentColor';
+  const sz = sizeMm || 10;
+  const r = 9, cx = 12, cy = 12;
+
+  const open = `<svg xmlns="http://www.w3.org/2000/svg" width="${sz}mm" height="${sz}mm" viewBox="0 0 24 24">`;
+  const close = '</svg>';
+
+  if (frac < 0.04 || frac > 0.96) {
+    return `${open}<circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${col}" stroke-width="1.5"/>${close}`;
+  }
+  if (frac > 0.46 && frac < 0.54) {
+    return `${open}<circle cx="${cx}" cy="${cy}" r="${r}" fill="${col}"/>${close}`;
+  }
+  const waxing = frac < 0.5;
+  const illum = waxing ? frac * 2 : (1 - frac) * 2;
+  const ex = (illum * 2 - 1) * r;
+  const d = `M ${cx} ${cy-r} A ${r} ${r} 0 1 ${waxing?0:1} ${cx} ${cy+r} A ${Math.abs(ex)} ${r} 0 0 ${waxing?1:0} ${cx} ${cy-r} Z`;
+  return `${open}<path d="${d}" fill="${col}"/>${close}`;
+}
+
+// ── Zodiac ─────────────────────────────────────────────────────────────────
+function getZodiac(month, day) {
+  const signs = [
+    {name:'Aquarius',   icon:'waves',      end:[2,18]},
+    {name:'Pisces',     icon:'fish',       end:[3,20]},
+    {name:'Aries',      icon:'flame',      end:[4,19]},
+    {name:'Taurus',     icon:'leaf',       end:[5,20]},
+    {name:'Gemini',     icon:'git-branch', end:[6,21]},
+    {name:'Cancer',     icon:'moon',       end:[7,22]},
+    {name:'Leo',        icon:'sun',        end:[8,22]},
+    {name:'Virgo',      icon:'feather',    end:[9,22]},
+    {name:'Libra',      icon:'scale',      end:[10,23]},
+    {name:'Scorpio',    icon:'zap',        end:[11,21]},
+    {name:'Sagittarius',icon:'crosshair',  end:[12,21]},
+    {name:'Capricorn',  icon:'mountain',   end:[1,19]},
+  ];
+  const m = month + 1;
+  for (const s of signs) {
+    if (m < s.end[0] || (m === s.end[0] && day <= s.end[1])) return s;
+  }
+  return signs[11];
+}
+
+// ── Helpers ────────────────────────────────────────────────────────────────
+function escHtml(s) {
+  return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function uid() { return 'e_' + Math.random().toString(36).slice(2,9); }
+function snap(mm) { return Math.round(mm * 2) / 2; }
+function getEl(id) { return S.elements.find(e => e.id === id); }
+
+function cbStyle(shape, size, sw) {
+  const s = size || 4, b = (sw||0.4) + 'pt solid var(--pg-ink)';
+  const base = `display:inline-block;width:${s}mm;height:${s}mm;border:${b};box-sizing:border-box;flex-shrink:0;`;
+  switch (shape) {
+    case 'circle':  return base + 'border-radius:50%;';
+    case 'rounded': return base + 'border-radius:1.2mm;';
+    case 'diamond': return base + 'transform:rotate(45deg);margin:1mm;';
+    default:        return base;
+  }
+}
+
+// ── RENDERERS ──────────────────────────────────────────────────────────────
+const RENDERERS = {
+
+  text(el) {
+    const c = el.config;
+    const fs = c.fontSize||8, fw = c.bold?700:400, fi = c.italic?'italic':'normal';
+    const col = c.color||'var(--pg-ink, #1a1a2e)', ta = c.align||'left';
+    const jcMap = {left:'flex-start',center:'center',right:'flex-end'};
+    const vaMap = {top:'flex-start',middle:'center',bottom:'flex-end'};
+    const va = vaMap[c.vAlign||'top']||'flex-start';
+    const jc = jcMap[ta]||'flex-start';
+    return `<div class="text-inner" style="width:100%;height:100%;display:flex;align-items:${va};justify-content:${jc};font-size:${fs}pt;font-weight:${fw};font-style:${fi};color:${col};text-align:${ta};overflow:hidden;word-break:break-word;white-space:pre-wrap;padding:0.3mm;box-sizing:border-box;line-height:1.35;outline:none;">${escHtml(c.content||'Text')}</div>`;
+  },
+
+  separator(el) {
+    const c = el.config;
+    return `<div style="width:100%;height:100%;display:flex;align-items:center;"><hr style="width:100%;border:none;border-top:${c.thickness||0.3}pt ${c.style||'solid'} ${c.color||'var(--pg-line)'};margin:0;"></div>`;
+  },
+
+  checkbox(el) {
+    const c = el.config;
+    const count = c.count||5, sw = c.strokeWidth||1.5;
+    const size = c.size||5;
+    const vert = c.orientation === 'vertical';
+    let boxes = '';
+    for (let i=0; i<count; i++) boxes += `<div style="${cbStyle(c.shape||'square', size, sw*0.3)}"></div>`;
+    const labelMargin = vert ? 'margin-bottom:1.5mm;' : 'margin-right:1.5mm;';
+    const lbl = c.label ? `<span style="font-size:4.5pt;color:var(--pg-dim, #7a7870);${labelMargin}">${escHtml(c.label)}</span>` : '';
+    const dir = vert ? 'column' : 'row';
+    const wrap = vert ? 'nowrap' : 'wrap';
+    const align = vert ? 'flex-start' : 'center';
+    return `<div style="display:flex;flex-direction:${dir};align-items:${align};gap:${Math.max(size*0.3,1)}mm;flex-wrap:${wrap};width:100%;height:100%;overflow:hidden;align-content:flex-start;">${lbl}${boxes}</div>`;
+  },
+
+  icon(el) {
+    const c = el.config;
+    const sz = Math.min(el.w, el.h) * 0.8;
+    return `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">${lucideIcon(c.name||'star', sz, c.strokeWidth||1.5, c.color||'var(--pg-ink)')}</div>`;
+  },
+
+  fill(el) {
+    const c = el.config;
+    const sp = c.spacing||5, dc = c.dotColor||'var(--pg-dot)';
+    let bg = '';
+    switch (c.pattern||'dots') {
+      case 'dots': bg=`background-image:radial-gradient(circle,${dc} 0.75px,transparent 0.75px);background-size:${sp}mm ${sp}mm;`; break;
+      case 'grid': bg=`background-image:linear-gradient(${dc} .3pt,transparent .3pt),linear-gradient(90deg,${dc} .3pt,transparent .3pt);background-size:${sp}mm ${sp}mm;`; break;
+      case 'lines': bg=`background-image:linear-gradient(${dc} .3pt,transparent .3pt);background-size:100% ${sp}mm;`; break;
+      case 'hex': bg=`background-image:radial-gradient(circle,${dc} 0.75px,transparent 0.75px),radial-gradient(circle,${dc} 0.75px,transparent 0.75px);background-size:${sp}mm ${sp*0.866}mm;background-position:0 0,${sp*0.5}mm ${sp*0.433}mm;`; break;
+    }
+    return `<div style="width:100%;height:100%;${bg}"></div>`;
+  },
+
+  image(el) {
+    const c = el.config;
+    if (!c.src) return `<div style="width:100%;height:100%;border:.5pt dashed var(--pg-line);display:flex;align-items:center;justify-content:center;">${lucideIcon('image',8,1.2,'var(--pg-dot)')}</div>`;
+    return `<img src="${c.src}" style="width:100%;height:100%;object-fit:${c.fit||'contain'};display:block;">`;
+  },
+
+  field(el) {
+    const c = el.config;
+    const n = Math.max(1, c.lines||1);
+    const labelH = c.label ? 3 : 0;
+    const availH = Math.max(el.h - labelH - 1, n);
+    const sp = availH / n;
+    let lines = '';
+    for (let i=0; i<n; i++) {
+      lines += `<div style="width:100%;border-bottom:.3pt solid var(--pg-ink, #1a1a2e);height:${sp*0.6}mm;margin-bottom:${sp*0.4}mm;flex-shrink:0;"></div>`;
+    }
+    const lbl = c.label ? `<div style="font-size:4.5pt;color:var(--pg-dim, #7a7870);text-transform:uppercase;letter-spacing:.05em;margin-bottom:.8mm;flex-shrink:0;">${escHtml(c.label)}</div>` : '';
+    return `<div style="display:flex;flex-direction:column;width:100%;height:100%;overflow:hidden;">${lbl}${lines}</div>`;
+  },
+
+  dateNum(el) {
+    const c = el.config;
+    const txt = String(new Date().getDate());
+    const fs = fitFontSize(txt, S.font, 700, el.w, el.h, 0) * (c.sizeFactor||1);
+    return `<div style="font-size:${fs}pt;font-weight:700;color:${c.color||'var(--pg-dot, #c5c2bb)'};line-height:1;display:flex;align-items:center;justify-content:center;width:100%;height:100%;overflow:hidden;">${txt}</div>`;
+  },
+
+  dayName(el) {
+    const c = el.config;
+    const days = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+    let name = days[new Date().getDay()];
+    if (c.textCase === 'upper') name = name.toUpperCase();
+    const fs = fitFontSize(name, S.font, 400, el.w, el.h, 0.06) * (c.sizeFactor||1);
+    return `<div style="font-size:${fs}pt;color:${c.color||'var(--pg-dim, #7a7870)'};letter-spacing:.06em;display:flex;align-items:center;justify-content:flex-start;width:100%;height:100%;overflow:hidden;line-height:1;">${name}</div>`;
+  },
+
+  weekNum(el, state) {
+    const c = el.config;
+    const d = new Date(state.year, state.month, 15);
+    const start = new Date(d.getFullYear(), 0, 1);
+    const wn = Math.ceil(((d - start) / 86400000 + start.getDay() + 1) / 7);
+    const text = (c.prefix||'Week ') + wn;
+    const fs = fitFontSize(text, S.font, 400, el.w, el.h, 0) * (c.sizeFactor||1);
+    return `<div style="font-size:${fs}pt;color:${c.color||'var(--pg-dim, #7a7870)'};display:flex;align-items:center;width:100%;height:100%;overflow:hidden;line-height:1;">${escHtml(text)}</div>`;
+  },
+
+  monthYear(el, state) {
+    const c = el.config;
+    const d = new Date(state.year, state.month, 1);
+    const fmt = c.format==='short' ? {month:'short',year:'2-digit'} : {month:'long',year:'numeric'};
+    const text = d.toLocaleDateString('en-US', fmt);
+    const fs = fitFontSize(text, S.font, 700, el.w, el.h, 0.04) * (c.sizeFactor||1);
+    return `<div style="font-size:${fs}pt;font-weight:700;color:${c.color||'var(--pg-ink, #1a1a2e)'};letter-spacing:.04em;display:flex;align-items:center;width:100%;height:100%;overflow:hidden;line-height:1;">${text}</div>`;
+  },
+
+  moonPhase(el, state) {
+    const c = el.config;
+    const sz = Math.min(el.w, el.h) * 0.82;
+    return `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">${moonPhaseSVG(state.year,state.month,15,sz,c.color||'var(--pg-ink)')}</div>`;
+  },
+
+  zodiac(el, state) {
+    const c = el.config;
+    const z = getZodiac(state.month, 15);
+    const sz = c.size||7, sp = c.iconSpacing||2, sw = c.strokeWidth||1.5;
+    const svg = lucideIcon(z.icon, sz, sw, c.color||'var(--pg-ink)');
+    const lbl = c.showLabel!==false ? `<span style="font-size:5pt;color:var(--pg-dim);white-space:nowrap;">${z.name}</span>` : '';
+    return `<div style="display:flex;align-items:center;gap:${sp}mm;width:100%;height:100%;overflow:hidden;">${svg}${lbl}</div>`;
+  },
+
+  mood(el) {
+    const c = el.config;
+    const count = c.count===3 ? 3 : 5;
+    const icons = MOOD_ICONS[count];
+    const sp = c.iconSpacing||2, sw = c.strokeWidth||1.5;
+    const sz = Math.min(el.h * 0.8, 6);
+    const svgs = icons.map(i => lucideIcon(i, sz, sw, 'var(--pg-dim)')).join('');
+    return `<div style="display:flex;align-items:center;gap:${sp}mm;width:100%;height:100%;overflow:hidden;">${svgs}</div>`;
+  },
+
+  energy(el) {
+    const c = el.config;
+    const sp = c.iconSpacing||2, sw = c.strokeWidth||1.5;
+    const sz = Math.min(el.h * 0.78, 5);
+    let dots = '';
+    for (let i=0; i<(c.count||5); i++) dots += lucideIcon('circle', sz*0.55, sw, 'var(--pg-dot)');
+    return `<div style="display:flex;align-items:center;gap:${sp}mm;width:100%;height:100%;overflow:hidden;">${lucideIcon('zap',sz,sw,'var(--pg-ink)')}${dots}</div>`;
+  },
+
+  water(el) {
+    const c = el.config;
+    const sp = c.iconSpacing||1.5, sw = c.strokeWidth||1.5;
+    const sz = Math.min(el.h * 0.78, 5);
+    let drops = '';
+    for (let i=0; i<(c.count||8); i++) drops += lucideIcon('droplet', sz, sw, 'var(--pg-dot)');
+    return `<div style="display:flex;align-items:center;flex-wrap:wrap;gap:${sp}mm;width:100%;height:100%;overflow:hidden;align-content:center;">${drops}</div>`;
+  },
+
+  sleep(el) {
+    const c = el.config;
+    const sp = c.iconSpacing||1.5, sw = c.strokeWidth||1.5;
+    const sz = Math.min(el.h * 0.78, 5);
+    let dots = '';
+    for (let i=0; i<(c.count||8); i++) dots += lucideIcon('circle', sz*0.55, sw, 'var(--pg-dot)');
+    return `<div style="display:flex;align-items:center;gap:${sp}mm;width:100%;height:100%;overflow:hidden;">${lucideIcon('moon',sz,sw,'var(--pg-ink)')}${dots}</div>`;
+  },
+
+  weather(el) {
+    const c = el.config;
+    const sz = Math.min(el.w, el.h) * 0.78;
+    return `<div style="width:100%;height:100%;display:flex;align-items:center;justify-content:center;">${lucideIcon(c.icon||'sun', sz, c.strokeWidth||1.5, c.color||'var(--pg-ink)')}</div>`;
+  },
+
+  goal(el)      { return _reflectionEl(el, 'target'); },
+  gratitude(el) { return _reflectionEl(el, 'heart'); },
+  win(el)       { return _reflectionEl(el, 'trophy'); },
+
+  priority(el) {
+    const c = el.config;
+    const count = c.count||3, shape = c.cbShape||'square';
+    let rows = '';
+    for (let i=0; i<count; i++) {
+      rows += `<div style="display:flex;align-items:center;gap:1.5mm;margin-bottom:1mm;flex-shrink:0;">
+        <div style="font-size:4pt;color:var(--pg-dim);width:2.5mm;text-align:right;flex-shrink:0;">${i+1}.</div>
+        <div style="${cbStyle(shape,4,0.4)}"></div>
+        <div style="flex:1;border-bottom:.3pt solid var(--pg-line);height:3.5mm;"></div>
+      </div>`;
+    }
+    return `<div style="display:flex;flex-direction:column;width:100%;height:100%;overflow:hidden;">
+      <div style="font-size:5.5pt;font-weight:700;color:var(--pg-dim);text-transform:uppercase;letter-spacing:.08em;padding-bottom:1mm;border-bottom:.3pt solid var(--pg-line);margin-bottom:1.5mm;flex-shrink:0;">${escHtml(c.label||'Priorities')}</div>
+      ${rows}
+    </div>`;
+  },
+
+  habits(el) {
+    const c = el.config;
+    const items = c.items||[], shape = c.cbShape||'square';
+    const sp = c.iconSpacing||2, sw = c.strokeWidth||1.5, isz = 3.5;
+    let rows = '';
+    items.forEach(h => {
+      rows += `<div style="display:flex;align-items:center;gap:${sp}mm;margin-bottom:1.5mm;flex-shrink:0;">
+        <div style="${cbStyle(shape,4,0.4)}"></div>
+        ${lucideIcon(h.icon||'star', isz, sw, 'var(--pg-dim)')}
+        <div style="font-size:5.5pt;color:var(--pg-ink);">${escHtml(h.name||'')}</div>
+        <div style="flex:1;border-bottom:.3pt solid var(--pg-line);height:3mm;"></div>
+      </div>`;
+    });
+    return `<div style="display:flex;flex-direction:column;width:100%;height:100%;overflow:hidden;">${rows}</div>`;
+  },
+
+  dailyFields(el) {
+    const c = el.config;
+    let rows = '';
+    (c.items||[]).forEach(f => {
+      rows += `<div style="display:flex;align-items:baseline;gap:1mm;margin-bottom:2.5mm;">
+        <div style="font-size:4.5pt;color:var(--pg-dim);text-transform:uppercase;white-space:nowrap;">${escHtml(f.label||'')}</div>
+        <div style="flex:1;border-bottom:.3pt solid var(--pg-ink);height:2.5mm;"></div>
+      </div>`;
+    });
+    return `<div style="display:flex;flex-direction:column;width:100%;height:100%;overflow:hidden;">${rows}</div>`;
+  },
+
+  notes(el) {
+    const c = el.config;
+    const sp = c.spacing||5, dc = c.color||'var(--pg-dot)';
+    let bg = '';
+    switch (c.pattern||'dots') {
+      case 'dots':  bg=`background-image:radial-gradient(circle,${dc} 0.75px,transparent 0.75px);background-size:${sp}mm ${sp}mm;`; break;
+      case 'grid':  bg=`background-image:linear-gradient(${dc} .3pt,transparent .3pt),linear-gradient(90deg,${dc} .3pt,transparent .3pt);background-size:${sp}mm ${sp}mm;`; break;
+      case 'lines': bg=`background-image:linear-gradient(${dc} .3pt,transparent .3pt);background-size:100% ${sp}mm;`; break;
+    }
+    return `<div style="width:100%;height:100%;${bg}"></div>`;
+  },
+};
+
+function _reflectionEl(el, icon) {
+  const c = el.config;
+  const sp = c.lineSpacing||5;
+  let lines = '';
+  for (let i=0; i<(c.lines||3); i++) {
+    lines += `<div style="width:100%;border-bottom:.3pt solid var(--pg-line);height:${sp*0.6}mm;margin-bottom:${sp*0.4}mm;flex-shrink:0;"></div>`;
+  }
+  return `<div style="display:flex;flex-direction:column;width:100%;height:100%;overflow:visible;">
+    <div style="display:flex;align-items:center;gap:1.5mm;margin-bottom:1.5mm;padding-bottom:1mm;border-bottom:.3pt solid var(--pg-line);flex-shrink:0;">
+      ${lucideIcon(icon, 3.5, 1.2, 'var(--pg-dim)')}
+      <span style="font-size:5.5pt;font-weight:700;color:var(--pg-dim);text-transform:uppercase;letter-spacing:.08em;">${escHtml(c.label||'Label')}</span>
+    </div>
+    ${lines}
+  </div>`;
+}
+
+// ── Canvas rendering ───────────────────────────────────────────────────────
+function buildElDiv(el) {
+  const div = document.createElement('div');
+  div.className = 'canvas-el';
+  div.dataset.id = el.id;
+  _setElDivStyle(div, el);
+  div.innerHTML = RENDERERS[el.type] ? RENDERERS[el.type](el, S) : '';
+  div.addEventListener('mousedown', onElMousedown);
+  if (el.type === 'text') div.addEventListener('dblclick', onTextDblclick);
+  return div;
+}
+
+let _editingId = null;
+
+function onTextDblclick(e) {
+  const id = e.currentTarget.dataset.id;
+  const el = getEl(id);
+  if (!el || el.locked || el.type !== 'text') return;
+  startInlineEdit(el);
+  e.stopPropagation();
+  e.preventDefault();
+}
+
+function startInlineEdit(el) {
+  if (_editingId === el.id) return;
+  _editingId = el.id;
+  const div = document.querySelector(`[data-id="${el.id}"]`);
+  if (!div) return;
+  const inner = div.querySelector('.text-inner');
+  if (!inner) return;
+
+  inner.contentEditable = 'true';
+  inner.style.outline = '2px solid #4a90d9';
+  inner.style.cursor = 'text';
+  inner.style.userSelect = 'text';
+  document.getElementById('sel-overlay').style.pointerEvents = 'none';
+  inner.focus();
+  const range = document.createRange();
+  range.selectNodeContents(inner);
+  const sel = window.getSelection();
+  sel.removeAllRanges();
+  sel.addRange(range);
+
+  const finish = () => {
+    if (_editingId !== el.id) return;
+    _editingId = null;
+    inner.contentEditable = 'false';
+    inner.style.outline = '';
+    inner.style.cursor = '';
+    inner.style.userSelect = '';
+    document.getElementById('sel-overlay').style.pointerEvents = '';
+    el.config.content = inner.innerText.replace(/\n$/, '');
+    updateElDOM(el);
+    pushHistory();
+    saveState();
+    renderProps();
+    inner.removeEventListener('blur', finish);
+    inner.removeEventListener('keydown', onKey);
+  };
+  const onKey = (ev) => {
+    ev.stopPropagation();
+    if (ev.key === 'Escape') { ev.preventDefault(); finish(); }
+  };
+  inner.addEventListener('blur', finish);
+  inner.addEventListener('keydown', onKey);
+}
+
+function _setElDivStyle(div, el) {
+  div.style.cssText = `position:absolute;left:${el.x}mm;top:${el.y}mm;width:${el.w}mm;height:${el.h}mm;z-index:${el.zIndex||1};overflow:hidden;box-sizing:border-box;`;
+}
+
+function renderCanvas() {
+  const pg = document.getElementById('pg');
+  Array.from(pg.querySelectorAll('.canvas-el')).forEach(d => d.remove());
+  const sorted = [...S.elements].sort((a,b) => (a.zIndex||1)-(b.zIndex||1));
+  sorted.forEach(el => pg.appendChild(buildElDiv(el)));
+  updatePgOuter();
+  applyTheme();
+  refreshIcons();
+}
+
+function updateElDOM(el) {
+  const pg = document.getElementById('pg');
+  let div = pg.querySelector(`[data-id="${el.id}"]`);
+  if (!div) { pg.appendChild(buildElDiv(el)); refreshIcons(); return; }
+  _setElDivStyle(div, el);
+  div.innerHTML = RENDERERS[el.type] ? RENDERERS[el.type](el, S) : '';
+  refreshIcons();
+}
+
+function updatePgOuter() {
+  const outer = document.getElementById('pg-outer');
+  const pg    = document.getElementById('pg');
+  if (!outer || !pg) return;
+  const w = S.tnW * S.zoom * PX_PER_MM;
+  const h = S.tnH * S.zoom * PX_PER_MM;
+  outer.style.width  = w + 'px';
+  outer.style.height = h + 'px';
+  pg.style.width  = S.tnW + 'mm';
+  pg.style.height = S.tnH + 'mm';
+  pg.style.transform = `scale(${S.zoom})`;
+  pg.style.transformOrigin = 'top left';
+}
+
+function applyTheme() {
+  const theme = THEMES[S.theme] || THEMES['Classic Warm'];
+  const pg = document.getElementById('pg');
+  if (!pg) return;
+  for (const [k,v] of Object.entries(theme)) {
+    pg.style.setProperty(`--pg-${k}`, v);
+  }
+  pg.style.backgroundColor = theme.page || '#ffffff';
+  pg.style.fontFamily = `'${S.font||'Georgia'}', serif`;
+}
+
+// ── Smart guides ───────────────────────────────────────────────────────────
+const SNAP_THRESHOLD = 1.5;
+
+function getSnapPoints(excludeId) {
+  const X = [{pos:0},{pos:S.tnW/2},{pos:S.tnW}];
+  const Y = [{pos:0},{pos:S.tnH/2},{pos:S.tnH}];
+  S.elements.forEach(el => {
+    if (el.id === excludeId) return;
+    X.push({pos:el.x},{pos:el.x+el.w/2},{pos:el.x+el.w});
+    Y.push({pos:el.y},{pos:el.y+el.h/2},{pos:el.y+el.h});
+  });
+  return { X, Y };
+}
+
+function findSnap(positions, snapPoints) {
+  let best = null;
+  for (const pos of positions) {
+    for (const sp of snapPoints) {
+      const diff = sp.pos - pos;
+      const ad = Math.abs(diff);
+      if (ad < SNAP_THRESHOLD && (!best || ad < Math.abs(best.delta))) {
+        best = { delta: diff, line: sp.pos };
+      }
+    }
+  }
+  return best;
+}
+
+function drawGuides(xLine, yLine) {
+  const svg = document.getElementById('guides-svg');
+  if (!svg) return;
+  svg.setAttribute('viewBox', `0 0 ${S.tnW} ${S.tnH}`);
+  let html = '';
+  if (xLine !== null && xLine !== undefined) {
+    html += `<line x1="${xLine}" y1="-3" x2="${xLine}" y2="${S.tnH+3}" stroke="#ff3b8a" stroke-width="0.4" vector-effect="non-scaling-stroke" stroke-dasharray="3,2"/>`;
+  }
+  if (yLine !== null && yLine !== undefined) {
+    html += `<line x1="-3" y1="${yLine}" x2="${S.tnW+3}" y2="${yLine}" stroke="#ff3b8a" stroke-width="0.4" vector-effect="non-scaling-stroke" stroke-dasharray="3,2"/>`;
+  }
+  svg.innerHTML = html;
+}
+
+function clearGuides() {
+  const svg = document.getElementById('guides-svg');
+  if (svg) svg.innerHTML = '';
+}
+
+// ── Selection overlay ──────────────────────────────────────────────────────
+let drag = null;
+
+function updateSelOverlay() {
+  const overlay = document.getElementById('sel-overlay');
+  const toolbar = document.getElementById('sel-toolbar');
+  const toolsep = document.getElementById('sel-sep');
+  const badge   = document.getElementById('sel-badge');
+
+  if (!S.selected) {
+    overlay.style.display = 'none';
+    if (toolbar) toolbar.style.display = 'none';
+    if (toolsep) toolsep.style.display = 'none';
+    return;
+  }
+  const el = getEl(S.selected);
+  if (!el) { overlay.style.display = 'none'; return; }
+
+  const ppm = S.zoom * PX_PER_MM;
+  overlay.style.display = 'block';
+  overlay.style.left   = (el.x * ppm) + 'px';
+  overlay.style.top    = (el.y * ppm) + 'px';
+  overlay.style.width  = (el.w * ppm) + 'px';
+  overlay.style.height = (el.h * ppm) + 'px';
+  overlay.style.cursor = el.locked ? 'not-allowed' : 'move';
+  overlay.classList.toggle('locked', !!el.locked);
+  if (badge) badge.textContent = el.type;
+
+  // Hide N/S handles for auto-height types
+  const autoH = AUTO_H.has(el.type);
+  overlay.querySelectorAll('.sel-handle').forEach(h => {
+    const d = h.dataset.dir;
+    h.style.visibility = autoH && (d==='n'||d==='s') ? 'hidden' : 'visible';
+  });
+
+  if (toolbar) toolbar.style.display = 'flex';
+  if (toolsep) toolsep.style.display = 'block';
+}
+
+function onElMousedown(e) {
+  const id = e.currentTarget.dataset.id;
+  selectEl(id);
+  e.stopPropagation();
+  e.preventDefault();
+}
+
+function initSelOverlay() {
+  const overlay = document.getElementById('sel-overlay');
+  overlay.addEventListener('mousedown', e => {
+    if (!S.selected) return;
+    const el = getEl(S.selected);
+    if (!el || el.locked) return;
+    const handle = e.target.closest('.sel-handle');
+    drag = {
+      type: handle ? 'resize' : 'move',
+      dir:  handle ? handle.dataset.dir : '',
+      elId: el.id,
+      startX:   e.clientX,
+      startY:   e.clientY,
+      startElX: el.x,
+      startElY: el.y,
+      startElW: el.w,
+      startElH: el.h,
+    };
+    e.stopPropagation();
+    e.preventDefault();
+  });
+}
+
+document.addEventListener('mousemove', e => {
+  if (!drag) return;
+  const ppm  = S.zoom * PX_PER_MM;
+  const dx   = (e.clientX - drag.startX) / ppm;
+  const dy   = (e.clientY - drag.startY) / ppm;
+  const el   = getEl(drag.elId);
+  if (!el || el.locked) return;
+
+  if (drag.type === 'move') {
+    let nx = drag.startElX + dx;
+    let ny = drag.startElY + dy;
+    const snaps = getSnapPoints(el.id);
+    const xSnap = findSnap([nx, nx + el.w/2, nx + el.w], snaps.X);
+    const ySnap = findSnap([ny, ny + el.h/2, ny + el.h], snaps.Y);
+    if (xSnap) nx += xSnap.delta;
+    if (ySnap) ny += ySnap.delta;
+    el.x = snap(nx);
+    el.y = snap(ny);
+    drawGuides(xSnap ? xSnap.line : null, ySnap ? ySnap.line : null);
+  } else {
+    const dir = drag.dir, autoH = AUTO_H.has(el.type);
+    if (dir.includes('e')) el.w = snap(Math.max(4, drag.startElW + dx));
+    if (dir.includes('w')) {
+      const nw = snap(Math.max(4, drag.startElW - dx));
+      el.x = snap(drag.startElX + drag.startElW - nw);
+      el.w = nw;
+    }
+    if (!autoH) {
+      if (dir.includes('s')) el.h = snap(Math.max(2, drag.startElH + dy));
+      if (dir.includes('n')) {
+        const nh = snap(Math.max(2, drag.startElH - dy));
+        el.y = snap(drag.startElY + drag.startElH - nh);
+        el.h = nh;
+      }
+    }
+    // Snap resize edges to other elements/page
+    const snaps = getSnapPoints(el.id);
+    if (dir.includes('e')) {
+      const eSnap = findSnap([el.x + el.w], snaps.X);
+      if (eSnap) { el.w = snap(el.w + eSnap.delta); drawGuides(eSnap.line, null); }
+      else drawGuides(null, null);
+    } else if (dir.includes('w')) {
+      const wSnap = findSnap([el.x], snaps.X);
+      if (wSnap) { el.x = snap(el.x + wSnap.delta); el.w = snap(el.w - wSnap.delta); drawGuides(wSnap.line, null); }
+      else drawGuides(null, null);
+    } else if (!autoH && dir.includes('s')) {
+      const sSnap = findSnap([el.y + el.h], snaps.Y);
+      if (sSnap) { el.h = snap(el.h + sSnap.delta); drawGuides(null, sSnap.line); }
+      else drawGuides(null, null);
+    } else if (!autoH && dir.includes('n')) {
+      const nSnap = findSnap([el.y], snaps.Y);
+      if (nSnap) { el.y = snap(el.y + nSnap.delta); el.h = snap(el.h - nSnap.delta); drawGuides(null, nSnap.line); }
+      else drawGuides(null, null);
+    }
+  }
+  updateElDOM(el);
+  updateSelOverlay();
+});
+
+document.addEventListener('mouseup', () => {
+  if (drag) { pushHistory(); drag = null; saveState(); clearGuides(); }
+});
+
+// ── Selection ──────────────────────────────────────────────────────────────
+function selectEl(id) {
+  S.selected = id;
+  document.querySelectorAll('.canvas-el').forEach(d => d.classList.remove('sel-active'));
+  const div = document.querySelector(`[data-id="${id}"]`);
+  if (div) div.classList.add('sel-active');
+  updateSelOverlay();
+  renderProps();
+}
+
+function deselectAll() {
+  S.selected = null;
+  document.querySelectorAll('.canvas-el').forEach(d => d.classList.remove('sel-active'));
+  updateSelOverlay();
+  renderProps();
+}
+
+// ── Add element ────────────────────────────────────────────────────────────
+let _zCtr = 1;
+
+function addElement(type) {
+  if (!RENDERERS[type] && type !== 'dailyFields' && type !== 'notes') return;
+  const cfg = JSON.parse(JSON.stringify(DEFAULTS[type]||{}));
+  const sz  = DEFAULT_SIZES[type] || {w:40, h:10};
+  const el  = {
+    id: uid(), type,
+    x: snap(S.tnW/2 - sz.w/2),
+    y: snap(S.tnH/2 - Math.max(sz.h,10)/2),
+    w: sz.w, h: sz.h,
+    zIndex: ++_zCtr,
+    locked: false,
+    config: cfg,
+  };
+  if (AUTO_H.has(type)) {
+    el.h = computeAutoH(el);
+    el.y = snap(S.tnH/2 - el.h/2);
+  }
+  S.elements.push(el);
+  renderCanvas();
+  selectEl(el.id);
+  pushHistory();
+  saveState();
+}
+
+// ── Delete / Duplicate / Layer ─────────────────────────────────────────────
+function deleteSelected() {
+  if (!S.selected) return;
+  S.elements = S.elements.filter(e => e.id !== S.selected);
+  S.selected = null;
+  renderCanvas();
+  updateSelOverlay();
+  renderProps();
+  pushHistory();
+  saveState();
+}
+
+function duplicateSelected() {
+  if (!S.selected) return;
+  const src = getEl(S.selected);
+  if (!src) return;
+  const clone = JSON.parse(JSON.stringify(src));
+  clone.id = uid();
+  clone.x = snap(src.x + 3);
+  clone.y = snap(src.y + 3);
+  clone.zIndex = ++_zCtr;
+  S.elements.push(clone);
+  renderCanvas();
+  selectEl(clone.id);
+  pushHistory();
+  saveState();
+}
+
+function bringToFront() {
+  if (!S.selected) return;
+  const el = getEl(S.selected);
+  if (el) { el.zIndex = ++_zCtr; renderCanvas(); updateSelOverlay(); saveState(); }
+}
+
+function sendToBack() {
+  if (!S.selected) return;
+  const el = getEl(S.selected);
+  const min = Math.min(...S.elements.map(e => e.zIndex||1));
+  if (el) { el.zIndex = Math.max(1, min-1); renderCanvas(); updateSelOverlay(); saveState(); }
+}
+
+function toggleLock() {
+  if (!S.selected) return;
+  const el = getEl(S.selected);
+  if (el) { el.locked = !el.locked; updateSelOverlay(); renderProps(); saveState(); }
+}
+
+function clearPage() {
+  if (!confirm('Clear all elements from the page?')) return;
+  S.elements = []; S.selected = null;
+  renderCanvas(); updateSelOverlay(); renderProps();
+  pushHistory(); saveState();
+}
+
+// ── History ────────────────────────────────────────────────────────────────
+function pushHistory() {
+  S.history.splice(S.histIdx + 1);
+  S.history.push(JSON.parse(JSON.stringify(S.elements)));
+  S.histIdx = S.history.length - 1;
+  if (S.history.length > 60) { S.history.shift(); S.histIdx--; }
+}
+
+function undo() {
+  if (S.histIdx <= 0) return;
+  S.histIdx--;
+  S.elements = JSON.parse(JSON.stringify(S.history[S.histIdx]));
+  renderCanvas(); deselectAll(); saveState();
+}
+
+function redo() {
+  if (S.histIdx >= S.history.length-1) return;
+  S.histIdx++;
+  S.elements = JSON.parse(JSON.stringify(S.history[S.histIdx]));
+  renderCanvas(); deselectAll(); saveState();
+}
+
+// ── Keyboard shortcuts ─────────────────────────────────────────────────────
+document.addEventListener('keydown', e => {
+  const tag = e.target.tagName;
+  if (tag==='INPUT'||tag==='TEXTAREA'||tag==='SELECT') return;
+  if (e.key==='Escape') { deselectAll(); return; }
+  if ((e.key==='Delete'||e.key==='Backspace') && S.selected) { deleteSelected(); return; }
+  if (e.ctrlKey||e.metaKey) {
+    if (e.key==='z') { e.shiftKey ? redo() : undo(); e.preventDefault(); return; }
+    if (e.key==='y') { redo(); e.preventDefault(); return; }
+    if (e.key==='d' && S.selected) { duplicateSelected(); e.preventDefault(); return; }
+  }
+  const el = S.selected ? getEl(S.selected) : null;
+  if (el && !el.locked) {
+    let moved = false;
+    if (e.key==='ArrowLeft')  { el.x = snap(el.x - 0.5); moved=true; }
+    if (e.key==='ArrowRight') { el.x = snap(el.x + 0.5); moved=true; }
+    if (e.key==='ArrowUp')    { el.y = snap(el.y - 0.5); moved=true; }
+    if (e.key==='ArrowDown')  { el.y = snap(el.y + 0.5); moved=true; }
+    if (moved) { e.preventDefault(); updateElDOM(el); updateSelOverlay(); }
+  }
+});
+
+// ── Properties panel ───────────────────────────────────────────────────────
+function renderProps() {
+  const panel = document.getElementById('props-body');
+  if (!panel) return;
+  if (!S.selected) {
+    panel.innerHTML = '<div style="font-size:10px;opacity:.45;padding:4px 0;">Select an element to edit its properties.</div>';
+    return;
+  }
+  const el = getEl(S.selected);
+  if (!el) { panel.innerHTML = ''; return; }
+
+  let h = `<div class="cfg-sec" style="margin-bottom:6px;">
+    <h3>Position</h3>
+    <div class="cfg-row">
+      <label>X (mm)</label>
+      <input type="number" value="${el.x.toFixed(1)}" step="0.5" style="width:58px;" onchange="propChange('x',+this.value)">
+      <label>Y</label>
+      <input type="number" value="${el.y.toFixed(1)}" step="0.5" style="width:58px;" onchange="propChange('y',+this.value)">
+    </div>
+    <div class="cfg-row" style="margin-top:3px;">
+      <label>W (mm)</label>
+      <input type="number" value="${el.w.toFixed(1)}" step="0.5" min="2" style="width:58px;" onchange="propChange('w',+this.value)">
+      ${!AUTO_H.has(el.type)
+        ? `<label>H</label><input type="number" value="${el.h.toFixed(1)}" step="0.5" min="1" style="width:58px;" onchange="propChange('h',+this.value)">`
+        : `<label style="opacity:.4;">H: ${el.h.toFixed(1)} (auto)</label>`}
+    </div>
+  </div>`;
+
+  h += renderTypeProps(el);
+
+  h += `<div style="margin-top:8px;border-top:1px solid rgba(255,255,255,.1);padding-top:6px;">
+    <div class="toggle-row">
+      <label class="toggle-sw"><input type="checkbox" ${el.locked?'checked':''} onchange="toggleLock()"><span class="slider"></span></label>
+      <span>Locked</span>
+    </div>
+    <div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px;">
+      <button class="btn btn-s btn-sm" onclick="duplicateSelected()">Duplicate</button>
+      <button class="btn btn-s btn-sm" onclick="bringToFront()">To Front</button>
+      <button class="btn btn-s btn-sm" onclick="sendToBack()">To Back</button>
+      <button class="btn btn-d" onclick="deleteSelected()">Delete</button>
+    </div>
+  </div>`;
+
+  panel.innerHTML = h;
+}
+
+function propChange(key, val) {
+  const el = getEl(S.selected);
+  if (!el) return;
+  el[key] = val;
+  if (AUTO_H.has(el.type)) { el.h = computeAutoH(el); renderProps(); }
+  updateElDOM(el);
+  updateSelOverlay();
+  saveState();
+}
+
+function cfgChange(key, val) {
+  const el = getEl(S.selected);
+  if (!el) return;
+  el.config[key] = val;
+  if (AUTO_H.has(el.type)) { el.h = computeAutoH(el); }
+  updateElDOM(el);
+  updateSelOverlay();
+  if (AUTO_H.has(el.type)) renderProps();
+  saveState();
+}
+
+function renderTypeProps(el) {
+  const c = el.config;
+  let h = '';
+  const iconSelect = (key, val) =>
+    `<select onchange="cfgChange('${key}',this.value)" style="flex:1;font-size:10px;">${ICON_LIST.map(i=>`<option value="${i}"${val===i?' selected':''}>${i}</option>`).join('')}</select>`;
+
+  const strokeRow = (key, val) =>
+    `<div class="cfg-row"><label>Stroke</label><input type="number" value="${val||1.5}" min="0.5" max="5" step="0.25" style="width:55px;" onchange="cfgChange('${key}',+this.value)"></div>`;
+  const spacingRow = (key, val) =>
+    `<div class="cfg-row"><label>Spacing (mm)</label><input type="number" value="${val||2}" min="0.5" max="10" step="0.5" style="width:55px;" onchange="cfgChange('${key}',+this.value)"></div>`;
+
+  switch (el.type) {
+    case 'text':
+      h = `<div class="cfg-sec"><h3>Text</h3>
+        <div class="cfg-row stacked"><label>Content</label>
+          <textarea style="width:100%;height:44px;" onchange="cfgChange('content',this.value)">${escHtml(c.content||'')}</textarea></div>
+        <div class="cfg-row"><label>Size (pt)</label><input type="number" value="${c.fontSize||8}" min="4" max="72" style="width:55px;" onchange="cfgChange('fontSize',+this.value)"></div>
+        <div class="cfg-row"><label>Align</label>
+          <select onchange="cfgChange('align',this.value)">
+            <option value="left" ${c.align!=='center'&&c.align!=='right'?'selected':''}>Left</option>
+            <option value="center" ${c.align==='center'?'selected':''}>Center</option>
+            <option value="right" ${c.align==='right'?'selected':''}>Right</option>
+          </select></div>
+        <div class="toggle-row"><label class="toggle-sw"><input type="checkbox" ${c.bold?'checked':''} onchange="cfgChange('bold',this.checked)"><span class="slider"></span></label><span>Bold</span></div>
+        <div class="toggle-row"><label class="toggle-sw"><input type="checkbox" ${c.italic?'checked':''} onchange="cfgChange('italic',this.checked)"><span class="slider"></span></label><span>Italic</span></div>
+        <div class="color-row"><label>Color</label><input type="color" value="${c.color||'#1a1a2e'}" onchange="cfgChange('color',this.value)"></div>
+      </div>`; break;
+
+    case 'separator':
+      h = `<div class="cfg-sec"><h3>Separator</h3>
+        <div class="cfg-row"><label>Style</label>
+          <select onchange="cfgChange('style',this.value)">
+            <option value="solid" ${c.style!=='dashed'&&c.style!=='dotted'?'selected':''}>Solid</option>
+            <option value="dashed" ${c.style==='dashed'?'selected':''}>Dashed</option>
+            <option value="dotted" ${c.style==='dotted'?'selected':''}>Dotted</option>
+          </select></div>
+        <div class="cfg-row"><label>Thickness (pt)</label><input type="number" value="${c.thickness||0.3}" min="0.1" max="6" step="0.1" style="width:55px;" onchange="cfgChange('thickness',+this.value)"></div>
+        <div class="color-row"><label>Color</label><input type="color" value="${c.color||'#ddd9d3'}" onchange="cfgChange('color',this.value)"></div>
+      </div>`; break;
+
+    case 'checkbox':
+      h = `<div class="cfg-sec"><h3>Checkboxes</h3>
+        <div class="cfg-row"><label>Count</label><input type="number" value="${c.count||5}" min="1" max="50" style="width:55px;" onchange="cfgChange('count',+this.value)"></div>
+        <div class="cfg-row"><label>Direction</label>
+          <select onchange="cfgChange('orientation',this.value)">
+            <option value="horizontal" ${c.orientation!=='vertical'?'selected':''}>Horizontal</option>
+            <option value="vertical" ${c.orientation==='vertical'?'selected':''}>Vertical</option>
+          </select></div>
+        <div class="cfg-row"><label>Shape</label>
+          <select onchange="cfgChange('shape',this.value)">
+            <option value="square" ${!c.shape||c.shape==='square'?'selected':''}>Square</option>
+            <option value="circle" ${c.shape==='circle'?'selected':''}>Circle</option>
+            <option value="rounded" ${c.shape==='rounded'?'selected':''}>Rounded</option>
+            <option value="diamond" ${c.shape==='diamond'?'selected':''}>Diamond</option>
+          </select></div>
+        <div class="cfg-row"><label>Size (mm)</label><input type="number" value="${c.size||5}" min="2" max="20" step="0.5" style="width:55px;" onchange="cfgChange('size',+this.value)"></div>
+        ${strokeRow('strokeWidth', c.strokeWidth)}
+        <div class="cfg-row stacked"><label>Label</label><input type="text" value="${escHtml(c.label||'')}" placeholder="Optional" oninput="cfgChange('label',this.value)"></div>
+      </div>`; break;
+
+    case 'icon':
+      h = `<div class="cfg-sec"><h3>Icon</h3>
+        <div class="cfg-row"><label>Icon</label>${iconSelect('name', c.name||'star')}</div>
+        ${strokeRow('strokeWidth', c.strokeWidth)}
+        <div class="color-row"><label>Color</label><input type="color" value="${c.color||'#1a1a2e'}" onchange="cfgChange('color',this.value)"></div>
+      </div>`; break;
+
+    case 'fill':
+      h = `<div class="cfg-sec"><h3>Fill Area</h3>
+        <div class="cfg-row"><label>Pattern</label>
+          <select onchange="cfgChange('pattern',this.value)">
+            <option value="dots"  ${c.pattern==='dots'||!c.pattern?'selected':''}>Dot grid</option>
+            <option value="grid"  ${c.pattern==='grid'?'selected':''}>Square grid</option>
+            <option value="lines" ${c.pattern==='lines'?'selected':''}>Ruled lines</option>
+            <option value="hex"   ${c.pattern==='hex'?'selected':''}>Hex dots</option>
+            <option value="empty" ${c.pattern==='empty'?'selected':''}>Empty</option>
+          </select></div>
+        <div class="cfg-row"><label>Spacing (mm)</label><input type="number" value="${c.spacing||5}" min="2" max="20" step="0.5" style="width:55px;" onchange="cfgChange('spacing',+this.value)"></div>
+        <div class="color-row"><label>Dot color</label><input type="color" value="${c.dotColor||'#c5c2bb'}" onchange="cfgChange('dotColor',this.value)"></div>
+      </div>`; break;
+
+    case 'image':
+      h = `<div class="cfg-sec"><h3>Image</h3>
+        <div class="cfg-row stacked"><label>Upload</label><input type="file" accept="image/*" style="font-size:10px;width:100%;" onchange="handleImgUpload(this)"></div>
+        <div class="cfg-row"><label>Fit</label>
+          <select onchange="cfgChange('fit',this.value)">
+            <option value="contain" ${c.fit!=='cover'&&c.fit!=='fill'?'selected':''}>Contain</option>
+            <option value="cover"   ${c.fit==='cover'?'selected':''}>Cover</option>
+            <option value="fill"    ${c.fit==='fill'?'selected':''}>Fill</option>
+          </select></div>
+      </div>`; break;
+
+    case 'field':
+      h = `<div class="cfg-sec"><h3>Field</h3>
+        <div class="cfg-row"><label>Label</label><input type="text" value="${escHtml(c.label||'')}" oninput="cfgChange('label',this.value)"></div>
+        <div class="cfg-row"><label>Lines</label><input type="number" value="${c.lines||1}" min="1" max="40" style="width:55px;" onchange="cfgChange('lines',+this.value)"></div>
+        <div style="font-size:9px;opacity:.45;margin-top:2px;">Lines distribute to fill box height — resize to scale</div>
+      </div>`; break;
+
+    case 'dateNum':
+      h = `<div class="cfg-sec"><h3>Day Number</h3>
+        <div class="cfg-row"><label>Scale</label><input type="number" value="${c.sizeFactor||1}" min="0.3" max="1.5" step="0.05" style="width:55px;" onchange="cfgChange('sizeFactor',+this.value)"></div>
+        <div class="color-row"><label>Color</label><input type="color" value="${c.color||'#c5c2bb'}" onchange="cfgChange('color',this.value)"></div>
+        <div style="font-size:9px;opacity:.45;margin-top:2px;">Auto-scales with box size</div>
+      </div>`; break;
+
+    case 'dayName':
+      h = `<div class="cfg-sec"><h3>Day Name</h3>
+        <div class="cfg-row"><label>Scale</label><input type="number" value="${c.sizeFactor||1}" min="0.3" max="1.5" step="0.05" style="width:55px;" onchange="cfgChange('sizeFactor',+this.value)"></div>
+        <div class="cfg-row"><label>Case</label>
+          <select onchange="cfgChange('textCase',this.value)">
+            <option value="upper" ${c.textCase!=='normal'?'selected':''}>UPPER</option>
+            <option value="normal" ${c.textCase==='normal'?'selected':''}>Normal</option>
+          </select></div>
+        <div class="color-row"><label>Color</label><input type="color" value="${c.color||'#7a7870'}" onchange="cfgChange('color',this.value)"></div>
+        <div style="font-size:9px;opacity:.45;margin-top:2px;">Auto-scales with box size</div>
+      </div>`; break;
+
+    case 'weekNum':
+      h = `<div class="cfg-sec"><h3>Week Number</h3>
+        <div class="cfg-row"><label>Prefix</label><input type="text" value="${escHtml(c.prefix||'Week ')}" style="width:80px;" oninput="cfgChange('prefix',this.value)"></div>
+        <div class="cfg-row"><label>Scale</label><input type="number" value="${c.sizeFactor||1}" min="0.3" max="1.5" step="0.05" style="width:55px;" onchange="cfgChange('sizeFactor',+this.value)"></div>
+        <div class="color-row"><label>Color</label><input type="color" value="${c.color||'#7a7870'}" onchange="cfgChange('color',this.value)"></div>
+        <div style="font-size:9px;opacity:.45;margin-top:2px;">Auto-scales with box size</div>
+      </div>`; break;
+
+    case 'monthYear':
+      h = `<div class="cfg-sec"><h3>Month / Year</h3>
+        <div class="cfg-row"><label>Format</label>
+          <select onchange="cfgChange('format',this.value)">
+            <option value="long"  ${c.format!=='short'?'selected':''}>May 2026</option>
+            <option value="short" ${c.format==='short'?'selected':''}>May '26</option>
+          </select></div>
+        <div class="cfg-row"><label>Scale</label><input type="number" value="${c.sizeFactor||1}" min="0.3" max="1.5" step="0.05" style="width:55px;" onchange="cfgChange('sizeFactor',+this.value)"></div>
+        <div class="color-row"><label>Color</label><input type="color" value="${c.color||'#1a1a2e'}" onchange="cfgChange('color',this.value)"></div>
+        <div style="font-size:9px;opacity:.45;margin-top:2px;">Auto-scales with box size</div>
+      </div>`; break;
+
+    case 'moonPhase':
+      h = `<div class="cfg-sec"><h3>Moon Phase</h3>
+        ${strokeRow('strokeWidth', c.strokeWidth)}
+        <div class="color-row"><label>Color</label><input type="color" value="${c.color||'#1a1a2e'}" onchange="cfgChange('color',this.value)"></div>
+        <div style="font-size:9px;opacity:.45;margin-top:2px;">Calculates phase from Page Settings date</div>
+      </div>`; break;
+
+    case 'zodiac':
+      h = `<div class="cfg-sec"><h3>Zodiac</h3>
+        <div class="cfg-row"><label>Icon size (mm)</label><input type="number" value="${c.size||7}" min="3" max="20" step="0.5" style="width:55px;" onchange="cfgChange('size',+this.value)"></div>
+        ${spacingRow('iconSpacing', c.iconSpacing)}
+        ${strokeRow('strokeWidth', c.strokeWidth)}
+        <div class="toggle-row"><label class="toggle-sw"><input type="checkbox" ${c.showLabel!==false?'checked':''} onchange="cfgChange('showLabel',this.checked)"><span class="slider"></span></label><span>Show sign name</span></div>
+        <div class="color-row"><label>Color</label><input type="color" value="${c.color||'#1a1a2e'}" onchange="cfgChange('color',this.value)"></div>
+      </div>`; break;
+
+    case 'mood':
+      h = `<div class="cfg-sec"><h3>Mood</h3>
+        <div class="cfg-row"><label>Faces</label>
+          <select onchange="cfgChange('count',+this.value)">
+            <option value="3" ${c.count===3?'selected':''}>3 faces</option>
+            <option value="5" ${c.count!==3?'selected':''}>5 faces</option>
+          </select></div>
+        ${spacingRow('iconSpacing', c.iconSpacing)}
+        ${strokeRow('strokeWidth', c.strokeWidth)}
+      </div>`; break;
+
+    case 'energy':
+      h = `<div class="cfg-sec"><h3>Energy</h3>
+        <div class="cfg-row"><label>Dots</label><input type="number" value="${c.count||5}" min="1" max="20" style="width:55px;" onchange="cfgChange('count',+this.value)"></div>
+        ${spacingRow('iconSpacing', c.iconSpacing)}
+        ${strokeRow('strokeWidth', c.strokeWidth)}
+      </div>`; break;
+
+    case 'water':
+      h = `<div class="cfg-sec"><h3>Water</h3>
+        <div class="cfg-row"><label>Glasses</label><input type="number" value="${c.count||8}" min="1" max="20" style="width:55px;" onchange="cfgChange('count',+this.value)"></div>
+        ${spacingRow('iconSpacing', c.iconSpacing)}
+        ${strokeRow('strokeWidth', c.strokeWidth)}
+      </div>`; break;
+
+    case 'sleep':
+      h = `<div class="cfg-sec"><h3>Sleep</h3>
+        <div class="cfg-row"><label>Dots</label><input type="number" value="${c.count||8}" min="1" max="20" style="width:55px;" onchange="cfgChange('count',+this.value)"></div>
+        ${spacingRow('iconSpacing', c.iconSpacing)}
+        ${strokeRow('strokeWidth', c.strokeWidth)}
+      </div>`; break;
+
+    case 'weather':
+      h = `<div class="cfg-sec"><h3>Weather</h3>
+        <div class="cfg-row"><label>Icon</label>
+          <select onchange="cfgChange('icon',this.value)">
+            <option value="sun"              ${c.icon==='sun'||!c.icon?'selected':''}>Sun</option>
+            <option value="cloud"            ${c.icon==='cloud'?'selected':''}>Cloud</option>
+            <option value="cloud-rain"       ${c.icon==='cloud-rain'?'selected':''}>Rain</option>
+            <option value="snowflake"        ${c.icon==='snowflake'?'selected':''}>Snow</option>
+            <option value="cloud-lightning"  ${c.icon==='cloud-lightning'?'selected':''}>Thunder</option>
+            <option value="wind"             ${c.icon==='wind'?'selected':''}>Wind</option>
+            <option value="cloud-sun"        ${c.icon==='cloud-sun'?'selected':''}>Partly cloudy</option>
+          </select></div>
+        ${strokeRow('strokeWidth', c.strokeWidth)}
+        <div class="color-row"><label>Color</label><input type="color" value="${c.color||'#1a1a2e'}" onchange="cfgChange('color',this.value)"></div>
+      </div>`; break;
+
+    case 'goal': case 'gratitude': case 'win': {
+      const label = el.type==='goal'?'Goal':el.type==='gratitude'?'Gratitude':'Win';
+      h = `<div class="cfg-sec"><h3>${label}</h3>
+        <div class="cfg-row"><label>Label</label><input type="text" value="${escHtml(c.label||'')}" oninput="cfgChange('label',this.value)"></div>
+        <div class="cfg-row"><label>Lines</label><input type="number" value="${c.lines||3}" min="1" max="30" style="width:55px;" onchange="cfgChange('lines',+this.value)"></div>
+        <div class="cfg-row"><label>Line spacing (mm)</label><input type="number" value="${c.lineSpacing||5}" min="3" max="15" step="0.5" style="width:55px;" onchange="cfgChange('lineSpacing',+this.value)"></div>
+        <div style="font-size:9px;opacity:.45;margin-top:2px;">Height auto: ${el.h.toFixed(1)}mm</div>
+      </div>`; break;
+    }
+
+    case 'priority':
+      h = `<div class="cfg-sec"><h3>Priority List</h3>
+        <div class="cfg-row"><label>Label</label><input type="text" value="${escHtml(c.label||'Priorities')}" oninput="cfgChange('label',this.value)"></div>
+        <div class="cfg-row"><label>Count</label><input type="number" value="${c.count||3}" min="1" max="15" style="width:55px;" onchange="cfgChange('count',+this.value)"></div>
+        <div class="cfg-row"><label>Checkbox</label>
+          <select onchange="cfgChange('cbShape',this.value)">
+            <option value="square"  ${!c.cbShape||c.cbShape==='square'?'selected':''}>Square</option>
+            <option value="circle"  ${c.cbShape==='circle'?'selected':''}>Circle</option>
+            <option value="rounded" ${c.cbShape==='rounded'?'selected':''}>Rounded</option>
+            <option value="diamond" ${c.cbShape==='diamond'?'selected':''}>Diamond</option>
+          </select></div>
+        <div style="font-size:9px;opacity:.45;margin-top:2px;">Height auto: ${el.h.toFixed(1)}mm</div>
+      </div>`; break;
+
+    case 'habits':
+      h = `<div class="cfg-sec"><h3>Habits</h3>
+        <div id="habit-list" style="max-height:110px;overflow-y:auto;margin-bottom:5px;">${(c.items||[]).map((it,i) =>
+          `<div style="display:flex;align-items:center;gap:4px;margin-bottom:3px;">
+            <select style="width:68px;font-size:9px;" onchange="habitChange(${i},'icon',this.value)">${ICON_LIST.slice(0,40).map(ic=>`<option value="${ic}"${it.icon===ic?' selected':''}>${ic}</option>`).join('')}</select>
+            <input type="text" value="${escHtml(it.name||'')}" style="flex:1;font-size:10px;" oninput="habitChange(${i},'name',this.value)">
+            <button class="btn btn-d" style="padding:1px 5px;" onclick="habitRemove(${i})">×</button>
+          </div>`).join('')}</div>
+        <button class="btn btn-s btn-sm" onclick="habitAdd()" style="width:100%;margin-bottom:6px;">+ Add Habit</button>
+        ${spacingRow('iconSpacing', c.iconSpacing)}
+        ${strokeRow('strokeWidth', c.strokeWidth)}
+        <div class="cfg-row"><label>Checkbox</label>
+          <select onchange="cfgChange('cbShape',this.value)">
+            <option value="square"  ${!c.cbShape||c.cbShape==='square'?'selected':''}>Square</option>
+            <option value="circle"  ${c.cbShape==='circle'?'selected':''}>Circle</option>
+            <option value="rounded" ${c.cbShape==='rounded'?'selected':''}>Rounded</option>
+            <option value="diamond" ${c.cbShape==='diamond'?'selected':''}>Diamond</option>
+          </select></div>
+      </div>`; break;
+
+    case 'notes':
+      h = `<div class="cfg-sec"><h3>Notes Area</h3>
+        <div class="cfg-row"><label>Pattern</label>
+          <select onchange="cfgChange('pattern',this.value)">
+            <option value="dots"  ${c.pattern==='dots'||!c.pattern?'selected':''}>Dot grid</option>
+            <option value="grid"  ${c.pattern==='grid'?'selected':''}>Square grid</option>
+            <option value="lines" ${c.pattern==='lines'?'selected':''}>Ruled lines</option>
+            <option value="empty" ${c.pattern==='empty'?'selected':''}>Empty</option>
+          </select></div>
+        <div class="cfg-row"><label>Spacing (mm)</label><input type="number" value="${c.spacing||5}" min="2" max="20" step="0.5" style="width:55px;" onchange="cfgChange('spacing',+this.value)"></div>
+        <div class="color-row"><label>Dot color</label><input type="color" value="${c.color||'#c5c2bb'}" onchange="cfgChange('color',this.value)"></div>
+      </div>`; break;
+
+    case 'dailyFields':
+      h = `<div class="cfg-sec"><h3>Daily Fields</h3>
+        <div style="max-height:100px;overflow-y:auto;margin-bottom:4px;">${(c.items||[]).map((it,i)=>
+          `<div style="display:flex;gap:4px;margin-bottom:3px;">
+            <input type="text" value="${escHtml(it.label||'')}" style="flex:1;font-size:10px;" oninput="dailyFieldChange(${i},this.value)">
+            <button class="btn btn-d" style="padding:1px 5px;" onclick="dailyFieldRemove(${i})">×</button>
+          </div>`).join('')}</div>
+        <button class="btn btn-s btn-sm" onclick="dailyFieldAdd()" style="width:100%;">+ Add Field</button>
+      </div>`; break;
+  }
+  return h;
+}
+
+// ── Habit item helpers ─────────────────────────────────────────────────────
+function habitChange(idx, key, val) {
+  const el = getEl(S.selected); if (!el) return;
+  el.config.items[idx][key] = val;
+  updateElDOM(el); saveState();
+}
+function habitRemove(idx) {
+  const el = getEl(S.selected); if (!el) return;
+  el.config.items.splice(idx,1);
+  updateElDOM(el); renderProps(); saveState();
+}
+function habitAdd() {
+  const el = getEl(S.selected); if (!el) return;
+  el.config.items.push({icon:'star',name:'Habit'});
+  updateElDOM(el); renderProps(); saveState();
+}
+function dailyFieldChange(idx, val) {
+  const el = getEl(S.selected); if (!el) return;
+  el.config.items[idx].label = val;
+  updateElDOM(el); saveState();
+}
+function dailyFieldRemove(idx) {
+  const el = getEl(S.selected); if (!el) return;
+  el.config.items.splice(idx,1);
+  updateElDOM(el); renderProps(); saveState();
+}
+function dailyFieldAdd() {
+  const el = getEl(S.selected); if (!el) return;
+  el.config.items.push({label:'Field'});
+  updateElDOM(el); renderProps(); saveState();
+}
+function handleImgUpload(input) {
+  const el = getEl(S.selected); if (!el||!input.files[0]) return;
+  const reader = new FileReader();
+  reader.onload = e => { cfgChange('src', e.target.result); };
+  reader.readAsDataURL(input.files[0]);
+}
+
+// ── Page settings ──────────────────────────────────────────────────────────
+function onThemeChange(name) {
+  S.theme = name;
+  applyTheme();
+  document.querySelectorAll('.theme-btn').forEach(b => b.classList.toggle('active', b.dataset.theme===name));
+  saveState();
+}
+
+function onFontChange(val) {
+  S.font = val;
+  applyTheme();
+  renderCanvas();
+  saveState();
+}
+
+function onTnSizeChange(val) {
+  if (val === 'custom') {
+    document.getElementById('custom-tn-row').style.display = 'flex';
+    return;
+  }
+  document.getElementById('custom-tn-row').style.display = 'none';
+  const sz = TN_SIZES[val] || TN_SIZES.passport;
+  S.tnW = sz.w; S.tnH = sz.h;
+  updatePgOuter(); saveState();
+}
+
+function onCustomSizeChange() {
+  S.tnW = +document.getElementById('opt-custom-tn-w').value || 89;
+  S.tnH = +document.getElementById('opt-custom-tn-h').value || 124;
+  updatePgOuter(); saveState();
+}
+
+function onMonthChange() {
+  S.month = +document.getElementById('sel-m').value;
+  S.year  = +document.getElementById('sel-y').value;
+  renderCanvas(); saveState();
+}
+
+function setZoom(z) {
+  S.zoom = Math.max(0.5, Math.min(6, z));
+  document.getElementById('zoom-val').textContent = Math.round(S.zoom*100)+'%';
+  updatePgOuter();
+  updateSelOverlay();
+}
+function zoomIn()  { setZoom(+(S.zoom + 0.25).toFixed(2)); }
+function zoomOut() { setZoom(+(S.zoom - 0.25).toFixed(2)); }
+
+// ── Collapsible sections ───────────────────────────────────────────────────
+function toggleSec(id) {
+  const sec = document.getElementById(id);
+  if (!sec) return;
+  const hdr  = sec.querySelector('.coll-hdr');
+  const body = sec.querySelector('.coll-body');
+  hdr.classList.toggle('open');
+  body.classList.toggle('open');
+}
+
+// ── Theme grid ─────────────────────────────────────────────────────────────
+function buildThemeGrid() {
+  const grid = document.getElementById('theme-grid');
+  if (!grid) return;
+  grid.innerHTML = Object.entries(THEMES).map(([name, t]) =>
+    `<button class="theme-btn${S.theme===name?' active':''}" data-theme="${name}" onclick="onThemeChange('${name}')" title="${name}">
+      <div class="theme-swatch">
+        <span style="background:${t.page}"></span><span style="background:${t.ink}"></span>
+        <span style="background:${t.acc}"></span><span style="background:${t.dot}"></span>
+      </div>
+      <div style="font-size:8px;line-height:1.2;">${name.split(' ')[0]}</div>
+    </button>`
+  ).join('');
+}
+
+// ── localStorage ───────────────────────────────────────────────────────────
+const STORAGE_KEY = 'tn-canvas-v1';
+
+function saveState() {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+      elements: S.elements, zoom: S.zoom,
+      tnW: S.tnW, tnH: S.tnH,
+      month: S.month, year: S.year,
+      theme: S.theme, font: S.font,
+    }));
+  } catch(e) {}
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return false;
+    const d = JSON.parse(raw);
+    Object.assign(S, {
+      elements: d.elements || [],
+      zoom: d.zoom || 2.5,
+      tnW: d.tnW || 89, tnH: d.tnH || 124,
+      month: d.month ?? new Date().getMonth(),
+      year: d.year || new Date().getFullYear(),
+      theme: d.theme || 'Classic Warm',
+      font: d.font || 'Georgia',
+    });
+    _zCtr = S.elements.reduce((mx,e) => Math.max(mx, e.zIndex||1), 1);
+    return true;
+  } catch(e) { return false; }
+}
+
+// ── Export / Import ────────────────────────────────────────────────────────
+function exportLayout() {
+  const data = JSON.stringify({elements: S.elements, tnW: S.tnW, tnH: S.tnH, theme: S.theme, font: S.font}, null, 2);
+  const a = document.createElement('a');
+  a.href = 'data:application/json;charset=utf-8,' + encodeURIComponent(data);
+  a.download = 'tn-layout.json';
+  a.click();
+}
+
+function importLayout(e) {
+  const file = e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const d = JSON.parse(ev.target.result);
+      if (d.elements) {
+        S.elements = d.elements;
+        if (d.tnW) S.tnW = d.tnW;
+        if (d.tnH) S.tnH = d.tnH;
+        if (d.theme) S.theme = d.theme;
+        if (d.font) S.font = d.font;
+        _zCtr = S.elements.reduce((mx,e2) => Math.max(mx, e2.zIndex||1), 1);
+        renderCanvas(); deselectAll(); buildThemeGrid();
+        document.getElementById('opt-font').value = S.font||'Georgia';
+        pushHistory(); saveState();
+      }
+    } catch(err) { alert('Invalid JSON file'); }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+
+// ── Print ──────────────────────────────────────────────────────────────────
+function doPrint() {
+  buildPrintArea();
+  window.print();
+}
+
+function buildPrintArea() {
+  const area = document.getElementById('print-area');
+  const pgEl = document.getElementById('pg');
+
+  // Clone pg at true mm size
+  const pgClone = pgEl.cloneNode(true);
+  pgClone.style.transform = 'none';
+  pgClone.style.position = 'relative';
+  pgClone.style.boxShadow = 'none';
+  pgClone.style.overflow = 'hidden';
+  pgClone.className = 'print-pg';
+
+  const spread = document.createElement('div');
+  spread.className = 'print-spread';
+  spread.appendChild(pgClone);
+
+  const sheet = document.createElement('div');
+  sheet.className = 'print-sheet';
+  sheet.appendChild(spread);
+
+  area.innerHTML = '';
+  area.appendChild(sheet);
+}
+
+// ── Init ───────────────────────────────────────────────────────────────────
+function init() {
+  loadState();
+
+  // Sync UI
+  document.getElementById('sel-m').value = S.month;
+  document.getElementById('sel-y').value = S.year;
+  document.getElementById('opt-font').value = S.font||'Georgia';
+
+  const tnMatch = Object.entries(TN_SIZES).find(([,v]) => v.w===S.tnW && v.h===S.tnH);
+  document.getElementById('opt-tnsize').value = tnMatch ? tnMatch[0] : 'custom';
+  if (!tnMatch) {
+    document.getElementById('custom-tn-row').style.display = 'flex';
+    document.getElementById('opt-custom-tn-w').value = S.tnW;
+    document.getElementById('opt-custom-tn-h').value = S.tnH;
+  }
+
+  buildThemeGrid();
+  updatePgOuter();
+  applyTheme();
+  renderCanvas();
+  initSelOverlay();
+
+  // Click stage background → deselect
+  document.getElementById('canvas-stage').addEventListener('mousedown', e => {
+    const tgt = e.target;
+    if (tgt.id==='canvas-stage' || tgt.id==='canvas-stage-inner' || tgt.id==='pg-outer' || tgt.id==='pg') {
+      deselectAll();
+    }
+  });
+
+  setZoom(S.zoom);
+
+  if (S.history.length === 0) pushHistory();
+
+  renderProps();
+
+  // Init lucide icons in static HTML
+  if (window.lucide) lucide.createIcons();
+}
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
