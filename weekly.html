@@ -52,7 +52,7 @@
         </div>
         <div class="day-pick" id="day-pick" style="margin-top:6px;"></div>
         <div id="h-list" style="margin-top:4px;"></div>
-        <div class="toggle-row" style="margin-top:6px;">
+        <div class="toggle-row" style="margin-top:8px;">
           <label class="toggle-sw"><input type="checkbox" id="opt-coloricons" checked onchange="onOptionChange()"><span class="slider"></span></label>
           <span style="font-size:12px;">Colored icons</span>
         </div>
@@ -325,9 +325,16 @@
           </div>
           <div class="toggle-row" style="margin-top:4px;">
             <label class="toggle-sw"><input type="checkbox" id="opt-habitmap" onchange="onOptionChange()"><span class="slider"></span></label>
-            <span style="font-size:12px;">Habit heatmap</span>
+            <span style="font-size:12px;">Circle habit tracker</span>
           </div>
-          <div class="toggle-row" style="margin-top:4px;">
+          <div style="margin-top:5px;padding-left:2px;">
+            <div id="box-list" style="margin-bottom:3px;"></div>
+            <div class="add-row">
+              <input id="box-title-inp" type="text" placeholder="Box title…" style="width:108px;font-size:11px;">
+              <button class="btn btn-s btn-sm" onclick="addBottomBox()">+</button>
+            </div>
+          </div>
+          <div class="toggle-row" style="margin-top:6px;">
             <label class="toggle-sw"><input type="checkbox" id="opt-moodcal" onchange="onOptionChange()"><span class="slider"></span></label>
             <span style="font-size:12px;">Mood calendar</span>
           </div>

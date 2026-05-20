@@ -11,6 +11,7 @@ function toggleMenu(){
    STATE & DEFAULTS
    ══════════════════════════════════════════════ */
 let habits = [];
+let bottomBoxes = [];
 let selectedIcon = 'star';
 let pickerBuilt = false;
 let selectedDays = [0,1,2,3,4,5,6];
@@ -270,7 +271,7 @@ function addDailyField(){
 function saveState(){
   try{
     localStorage.setItem(STORAGE_KEY,JSON.stringify({
-      habits, selectedIcon, selectedDays,
+      habits, bottomBoxes, selectedIcon, selectedDays,
       month:parseInt($('sel-m').value), year:parseInt($('sel-y').value),
       opts, graphMetrics, dailyFields
     }));
@@ -282,6 +283,7 @@ function loadState(){
     const s=JSON.parse(localStorage.getItem(STORAGE_KEY));
     if(!s) return false;
     if(s.habits) habits=s.habits;
+    if(s.bottomBoxes) bottomBoxes=s.bottomBoxes;
     if(s.selectedIcon) selectedIcon=s.selectedIcon;
     if(s.selectedDays) selectedDays=s.selectedDays;
     if(s.month!=null) $('sel-m').value=s.month;
@@ -407,7 +409,7 @@ function toggleLink(){
 /* ── Import / Export / Reset ── */
 function exportSettings(){
   readOptsFromUI();
-  const data={habits,selectedIcon,selectedDays,opts,graphMetrics,dailyFields,
+  const data={habits,bottomBoxes,selectedIcon,selectedDays,opts,graphMetrics,dailyFields,
     month:parseInt($('sel-m').value),year:parseInt($('sel-y').value)};
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const a=document.createElement('a');
@@ -425,6 +427,7 @@ function importSettings(e){
     try{
       const data=JSON.parse(reader.result);
       if(data.habits) habits=data.habits;
+      if(data.bottomBoxes) bottomBoxes=data.bottomBoxes;
       if(data.selectedIcon) selectedIcon=data.selectedIcon;
       if(data.selectedDays) selectedDays=data.selectedDays;
       if(data.opts) opts={...opts,...data.opts};
@@ -438,6 +441,7 @@ function importSettings(e){
       renderMetrics();
       renderDailyFields();
       renderHabits();
+      renderBottomBoxes();
       buildDayPick();
       generate();
     }catch(err){ alert('Invalid settings file.'); }
@@ -568,6 +572,29 @@ function renderHabits(){
     item.appendChild(btn);list.appendChild(item);
   });
   lucide.createIcons();
+}
+
+/* ── Bottom boxes (add/remove by title) ── */
+function addBottomBox(){
+  const inp=$('box-title-inp');
+  const title=inp.value.trim();
+  if(!title) return;
+  bottomBoxes.push({title,id:Date.now()});
+  inp.value='';
+  renderBottomBoxes();generate();
+}
+function removeBottomBox(id){
+  bottomBoxes=bottomBoxes.filter(b=>b.id!==id);
+  renderBottomBoxes();generate();
+}
+function renderBottomBoxes(){
+  const list=$('box-list');list.innerHTML='';
+  bottomBoxes.forEach(box=>{
+    const row=el('div','h-item');
+    row.appendChild(el('span','hn',box.title));
+    const btn=el('button','btn btn-d','x');btn.onclick=()=>removeBottomBox(box.id);
+    row.appendChild(btn);list.appendChild(row);
+  });
 }
 
 /* ══════════════════════════════════════════════
@@ -998,72 +1025,145 @@ function mkHabitMap(y,m,c){
   const colors=c||getColors();
   const p=pg('habit-map',colors);
   p.classList.add('fcol');
+
+  const sz=tnSize();
+  const margin=opts.margin;
+  const side=margin+1;
+  const contentW=sz.w-2*side;
+  const contentH=sz.h-2*margin;
   const days=daysInMonth(y,m);
-  const hdr=el('div','sh',`${MONTHS[m]} ${y} — Habit Tracker`);
-  hdr.style.cssText=`color:${colors.dim};border-bottom:.3pt solid ${colors.line};`;
+  const habList=habits.length>0?habits:[{icon:'star',name:'Habit 1',days:[0,1,2,3,4,5,6]},{icon:'droplets',name:'Habit 2',days:[0,1,2,3,4,5,6]}];
+  const nHabs=Math.min(habList.length,8);
+  const font=activeFont();
+
+  // Header
+  const hdr=el('div','sh',`${MONTHS[m]} ${y} — Circle Habit Tracker`);
+  hdr.style.cssText=`color:${colors.dim};border-bottom:.3pt solid ${colors.line};font-size:5pt;`;
   p.appendChild(hdr);
 
-  const habList=habits.length>0?habits:[{icon:'star',name:'Habit 1',days:[0,1,2,3,4,5,6]}];
-  const totalCols=Math.max(habList.length+3, 7);
-  const extraCols=totalCols-habList.length;
-  const dayColW=4;
-  const dowColW=3;
-  const wl=opts.weekstart==='sunday'?'SMTWTFS':'MTWTFSS';
+  // Layout budget
+  const legendH=20;
+  const headerEst=6;
+  const svgH=contentH-headerEst-legendH-3;
+  const svgW=contentW;
 
-  const tbl=el('div','');
-  tbl.style.cssText=`display:grid;grid-template-columns:${dayColW}mm ${dowColW}mm repeat(${totalCols},1fr);grid-template-rows:auto repeat(${days},1fr);gap:0;width:100%;flex:1;`;
+  // Circle geometry — shifted right so upper-left gap has room for labels
+  const cx=svgW*0.55;
+  const cy=svgH*0.50;
+  const outerR=Math.min(cx,cy,svgW-cx,svgH-cy)*0.96;
+  const dayRingT=Math.max(3.5,outerR*0.13);
+  const dayInnerR=outerR-dayRingT;
+  const centerR=Math.max(7,outerR*0.28);
+  const habRingT=nHabs>0?(dayInnerR-centerR)/nHabs:4;
 
-  tbl.appendChild(el('div',''));
-  tbl.appendChild(el('div',''));
-  habList.forEach(h=>{
-    const hc=el('div','');
-    hc.style.cssText=`display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:.3mm;padding:0 0 .8mm;overflow:hidden;`;
-    const ico=lucideEl(h.icon,'3mm','3mm');
-    ico.style.color=iconColor(h.icon,colors.dim);
-    hc.appendChild(ico);
-    const lbl=el('div','',h.name);
-    lbl.style.cssText=`font-size:3pt;color:${colors.dot};text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;`;
-    hc.appendChild(lbl);
-    tbl.appendChild(hc);
-  });
-  for(let i=0;i<extraCols;i++) tbl.appendChild(el('div',''));
+  // Arc: 270° total — day 1 at top (0° AFTC), clockwise, ends at left (270° AFTC)
+  // Gap: 270°→360° (upper-left) — habit labels live here
+  const dayArc=270/days;
 
-  for(let d=1;d<=days;d++){
-    const dayDow=dow(y,m,d);
-    const isWe=(dayDow===0||dayDow===6);
-    const idx=opts.weekstart==='sunday'?dayDow:(dayDow+6)%7;
-    const isMon=(opts.weekstart==='sunday'?dayDow===0:dayDow===1);
+  // AFTC = clockwise from top; toRad converts to SVG math angle
+  const toRad=a=>(a-90)*Math.PI/180;
+  const px=(r,a)=>+(cx+r*Math.cos(toRad(a))).toFixed(3);
+  const py=(r,a)=>+(cy+r*Math.sin(toRad(a))).toFixed(3);
 
-    const dn=el('div','',d);
-    dn.style.cssText=`font-size:5pt;font-weight:700;color:${isWe?colors.dot:colors.dim};text-align:right;padding-right:.8mm;display:flex;align-items:center;justify-content:flex-end;${isMon&&d>1?`border-top:.3pt solid ${colors.line};`:''}`;
-    tbl.appendChild(dn);
+  // Filled ring segment path (r1=inner, r2=outer, angles AFTC clockwise)
+  function seg(r1,r2,a1,a2){
+    const laf=(a2-a1)>180?1:0;
+    return `M ${px(r2,a1)} ${py(r2,a1)} A ${r2} ${r2} 0 ${laf} 1 ${px(r2,a2)} ${py(r2,a2)} L ${px(r1,a2)} ${py(r1,a2)} A ${r1} ${r1} 0 ${laf} 0 ${px(r1,a1)} ${py(r1,a1)} Z`;
+  }
 
-    const dl=el('div','',wl[idx]);
-    dl.style.cssText=`font-size:4pt;color:${colors.dot};display:flex;align-items:center;justify-content:center;${isMon&&d>1?`border-top:.3pt solid ${colors.line};`:''}`;
-    tbl.appendChild(dl);
+  const acc=colors.acc||colors.dim;
+  let svg=`<svg width="${svgW}mm" height="${svgH}mm" viewBox="0 0 ${svgW} ${svgH}" xmlns="http://www.w3.org/2000/svg" style="flex-shrink:0;display:block;">`;
 
-    habList.forEach(h=>{
-      const wdayIdx=opts.weekstart==='sunday'?dayDow:(dayDow+6)%7;
-      const active=!h.days||h.days.includes(wdayIdx);
-      const cell=el('div','');
-      let cs=`border:.2pt solid ${colors.line};`;
-      if(!active) cs=`border:.2pt dashed ${colors.line};opacity:.2;`;
-      else if(isWe) cs+=`background:${colors.bg};`;
-      if(isMon&&d>1) cs+=`border-top:.4pt solid ${colors.dim};`;
-      cell.style.cssText=cs;
-      tbl.appendChild(cell);
-    });
-    for(let i=0;i<extraCols;i++){
-      const cell=el('div','');
-      let cs=`border:.2pt solid ${colors.line};`;
-      if(isWe) cs+=`background:${colors.bg};`;
-      if(isMon&&d>1) cs+=`border-top:.4pt solid ${colors.dim};`;
-      cell.style.cssText=cs;
-      tbl.appendChild(cell);
+  // ── 1. Habit ring arc cells (fill only, no stroke — full circles drawn separately)
+  for(let h=0;h<nHabs;h++){
+    const rO=dayInnerR-h*habRingT;
+    const rI=rO-habRingT;
+    svg+=`<path d="${seg(rI,rO,0,270)}" fill="${colors.page}" stroke="none"/>`;
+    // Day dividers within arc
+    for(let d=0;d<=days;d++){
+      const a=d*dayArc;
+      svg+=`<line x1="${px(rI,a)}" y1="${py(rI,a)}" x2="${px(rO,a)}" y2="${py(rO,a)}" stroke="${colors.line}" stroke-width="0.2"/>`;
     }
   }
 
-  p.appendChild(tbl);
+  // ── 2. Day ring arc cells (accent fill, no stroke)
+  for(let d=1;d<=days;d++){
+    const a1=(d-1)*dayArc;
+    const a2=d*dayArc;
+    const isWe=[0,6].includes(dow(y,m,d));
+    svg+=`<path d="${seg(dayInnerR,outerR,a1,a2)}" fill="${isWe?acc+'20':acc+'40'}" stroke="none"/>`;
+  }
+
+  // ── 3. Arc-only boundary strokes (0°–270°, no full circle)
+  svg+=`<path d="${seg(dayInnerR,outerR,0,270)}" fill="none" stroke="${colors.line}" stroke-width="0.3"/>`;
+  for(let h=0;h<nHabs;h++){
+    const rO=dayInnerR-h*habRingT;
+    const rI=rO-habRingT;
+    svg+=`<path d="${seg(rI,rO,0,270)}" fill="none" stroke="${colors.line}" stroke-width="0.25"/>`;
+  }
+  svg+=`<path d="${seg(0,centerR,0,270)}" fill="none" stroke="${colors.line}" stroke-width="0.25"/>`;
+
+  // ── 4. Day numbers (after fill so they render on top)
+  for(let d=1;d<=days;d++){
+    const a1=(d-1)*dayArc;
+    const a2=d*dayArc;
+    const ma=(a1+a2)/2;
+    const tr=(dayInnerR+outerR)/2;
+    const rot=(ma-90).toFixed(1);
+    const fs=Math.min(3.2,dayArc*0.42);
+    svg+=`<text x="${px(tr,ma)}" y="${py(tr,ma)}" text-anchor="middle" dominant-baseline="middle" font-size="${fs}" font-family="${font},serif" fill="${colors.ink}" transform="rotate(${rot},${px(tr,ma)},${py(tr,ma)})">${d}</text>`;
+  }
+
+  // ── 5. Center month name
+  const cfs=+(Math.min(8,centerR*0.6)).toFixed(1);
+  svg+=`<text x="${cx}" y="${cy}" text-anchor="middle" dominant-baseline="middle" font-size="${cfs}" font-weight="700" letter-spacing="0.8" font-family="${font},serif" fill="${colors.dim}">${MONTHS[m].toUpperCase()}</text>`;
+
+  // ── 6. Habit writing lines in gap (upper-left, 270°–360°)
+  // Each ring gets a solid horizontal writing line from left edge to its outer
+  // circle boundary at 315° — no text, user writes habit name after printing.
+  // Full circles already drawn so line tip visibly touches the correct ring circle.
+  for(let h=0;h<nHabs;h++){
+    const rO=+(dayInnerR-h*habRingT).toFixed(3);
+    const rI=+(dayInnerR-(h+1)*habRingT).toFixed(3);
+    const rMid=+((rO+rI)/2).toFixed(3);
+    // Lines at BOTTOM of ring band at angle 0° (inner boundary = bottom of box at top of circle)
+    const yLine=+(cy-rI).toFixed(3);
+    const xTip=+cx.toFixed(3);
+    svg+=`<line x1="0.5" y1="${yLine}" x2="${xTip}" y2="${yLine}" stroke="${colors.dim}" stroke-width="0.25"/>`;
+    // Habit name label centered in ring band
+    if(habits[h]){
+      const yText=+(cy-rMid).toFixed(3);
+      const fs=+(Math.max(2,Math.min(3.5,habRingT*0.55))).toFixed(1);
+      svg+=`<text x="1" y="${yText}" dominant-baseline="middle" font-size="${fs}" font-family="${font},sans-serif" fill="${colors.ink}">${habits[h].name}</text>`;
+    }
+  }
+
+  svg+=`</svg>`;
+
+  const svgWrap=el('div','');
+  svgWrap.style.cssText=`flex:1;display:flex;align-items:center;`;
+  svgWrap.innerHTML=svg;
+  p.appendChild(svgWrap);
+
+  // ── Custom boxes at bottom
+  if(bottomBoxes.length>0){
+    const lgd=el('div','');
+    lgd.style.cssText=`display:flex;gap:2mm;flex-shrink:0;height:${legendH}mm;`;
+    bottomBoxes.forEach(boxDef=>{
+      const box=el('div','');
+      box.style.cssText=`flex:1;border:.3pt solid ${colors.line};padding:1.5mm;display:flex;flex-direction:column;overflow:hidden;`;
+      const lbl=el('div','',boxDef.title);
+      lbl.style.cssText=`font-size:3.5pt;font-weight:700;color:${colors.dim};letter-spacing:.5px;margin-bottom:1mm;flex-shrink:0;`;
+      box.appendChild(lbl);
+      for(let i=0;i<5;i++){
+        const ln=el('div','');
+        ln.style.cssText=`flex:1;border-bottom:.25pt solid ${colors.line};`;
+        box.appendChild(ln);
+      }
+      lgd.appendChild(box);
+    });
+    p.appendChild(lgd);
+  }
   return p;
 }
 
@@ -1885,12 +1985,14 @@ buildColorOverrides();
 renderMetrics();
 renderDailyFields();
 renderHabits();
+renderBottomBoxes();
 buildDayPick();
 lucide.createIcons();
 
 $('sel-m').addEventListener('change',()=>generate());
 $('sel-y').addEventListener('change',()=>generate());
 $('h-name').addEventListener('keydown',e=>{if(e.key==='Enter')addHabit();});
+$('box-title-inp').addEventListener('keydown',e=>{if(e.key==='Enter')addBottomBox();});
 $('metric-name').addEventListener('keydown',e=>{if(e.key==='Enter')addMetric();});
 $('daily-field-name').addEventListener('keydown',e=>{if(e.key==='Enter')addDailyField();});
 
