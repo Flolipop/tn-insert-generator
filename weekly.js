@@ -31,7 +31,7 @@ const COLOR_VARS = ['ink','dim','bg','page','dot','line','acc'];
 const COLOR_LABELS = { ink:'Ink', dim:'Dim text', bg:'Background', page:'Page', dot:'Dot grid', line:'Lines', acc:'Accent' };
 
 /* ── Graph metrics ── */
-let graphMetrics = [{id:1,title:'Weight'},{id:2,title:'Steps'}];
+let graphMetrics = [{id:1,title:'Weight',min:null,max:null,step:null},{id:2,title:'Steps',min:null,max:null,step:null}];
 
 /* ── Daily fields ── */
 let dailyFields = [{id:1,label:'Steps'},{id:2,label:'Wt'}];
@@ -133,6 +133,7 @@ const MOOD_ICONS5 = ['angry','frown','meh','smile','laugh'];
 
 const MONTHS   = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DOW_FULL = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const DOW_ABB3 = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
 const WDAY_LBL_MON = ['M','T','W','T','F','S','S'];
 const WDAY_LBL_SUN = ['S','M','T','W','T','F','S'];
 
@@ -222,19 +223,39 @@ function renderMetrics(){
   graphMetrics.forEach(m=>{
     const row=el('div','metric-item');
     const inp=document.createElement('input');
-    inp.type='text';inp.value=m.title;
+    inp.type='text';inp.value=m.title;inp.style.cssText='width:76px;font-size:11px;padding:3px 6px;';
     inp.onchange=function(){ m.title=this.value; onOptionChange(); };
     row.appendChild(inp);
-    const del=el('button','btn btn-d','x');
+
+    const tog=el('button','btn btn-d','…');
+    tog.title='Min / Max / Step';tog.style.cssText='font-size:12px;padding:2px 6px;';
+    tog.onclick=()=>{ const d=row.querySelector('.metric-details'); d.style.display=d.style.display==='flex'?'none':'flex'; };
+    row.appendChild(tog);
+
+    const del=el('button','btn btn-d','×');
     del.onclick=()=>{ graphMetrics=graphMetrics.filter(x=>x.id!==m.id); renderMetrics(); onOptionChange(); };
     row.appendChild(del);
+
+    const det=el('div','metric-details');
+    const mkNum=(lbl,val,cb)=>{
+      det.appendChild(el('span','metric-det-lbl',lbl));
+      const ni=document.createElement('input');
+      ni.type='number';ni.placeholder=lbl;ni.value=val??'';
+      ni.style.cssText='width:40px;font-size:10px;padding:2px 4px;';
+      ni.onchange=function(){ cb(this.value===''?null:+this.value); onOptionChange(); };
+      det.appendChild(ni);
+    };
+    mkNum('Min',m.min,v=>{m.min=v;});
+    mkNum('Max',m.max,v=>{m.max=v;});
+    mkNum('Step',m.step,v=>{m.step=v;});
+    row.appendChild(det);
     list.appendChild(row);
   });
 }
 function addMetric(){
   const name=$('metric-name').value.trim();
   if(!name)return;
-  graphMetrics.push({id:Date.now(),title:name});
+  graphMetrics.push({id:Date.now(),title:name,min:null,max:null,step:null});
   $('metric-name').value='';
   renderMetrics(); onOptionChange();
 }
@@ -400,7 +421,7 @@ function toggleLink(){
   opts.linkFieldsGraphs=$('opt-linkfg').checked;
   $('metric-section').style.display=opts.linkFieldsGraphs?'none':'';
   if(opts.linkFieldsGraphs){
-    graphMetrics=dailyFields.map(f=>({id:f.id,title:f.label}));
+    graphMetrics=dailyFields.map(f=>({id:f.id,title:f.label,min:null,max:null,step:null}));
     renderMetrics();
   }
   generate();
@@ -695,16 +716,20 @@ function getPagePadding(){
 /* ══════════════════════════════════════════════
    GRAPH SVG
    ══════════════════════════════════════════════ */
-function buildGraphSVG(days, title, colors, yr, mo, graphW){
+function buildGraphSVG(days, metric, colors, yr, mo, graphW){
   const c=colors||getColors();
+  const title = typeof metric==='string' ? metric : metric.title;
+  const hasRange = typeof metric!=='string' && metric.min!=null && metric.max!=null && metric.step!=null && metric.step>0 && metric.max>metric.min;
   const colW=opts.graphcol;
   const titleW=4, lblW=4;
+  const headerH = hasRange ? 4 : 0;
   const plotW= graphW ? +(graphW - titleW - lblW).toFixed(2) : Math.max(10, Math.floor(28/colW)*colW);
   const nCols=Math.round(plotW/colW);
   const W=+(titleW+plotW+lblW).toFixed(2);
   const plotX=titleW;
   const contentH=tnSize().h - 2*opts.margin - 8;
   const rowH=+((contentH/days)).toFixed(3), H=+(days*rowH).toFixed(2);
+  const totalH=+(H+headerH).toFixed(2);
 
   const startDow = opts.weekstart==='sunday' ? 0 : 1;
   const fd = new Date(yr, mo, 1).getDay();
@@ -713,10 +738,25 @@ function buildGraphSVG(days, title, colors, yr, mo, graphW){
     if((fd+d-1)%7===startDow) weekStarts.add(d);
   }
 
-  let s=`<svg width="100%" height="100%" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">`;
+  let s=`<svg width="100%" height="100%" viewBox="0 0 ${W} ${totalH}" preserveAspectRatio="none">`;
+
+  // Value axis header
+  if(hasRange){
+    const {min,max,step}=metric;
+    s+=`<line x1="${plotX}" y1="${headerH}" x2="${plotX+plotW}" y2="${headerH}" stroke="${c.dim}" stroke-width=".4"/>`;
+    const numSteps=Math.round((max-min)/step);
+    for(let i=0;i<=numSteps;i++){
+      const v=+(min+i*step).toFixed(8);
+      if(v>max+step*0.001) break;
+      const xRatio=(v-min)/(max-min);
+      const lx=+(plotX+xRatio*plotW).toFixed(2);
+      s+=`<line x1="${lx}" y1="${headerH-1}" x2="${lx}" y2="${headerH}" stroke="${c.dim}" stroke-width=".3"/>`;
+      s+=`<text x="${lx}" y="${+(headerH/2).toFixed(1)}" text-anchor="middle" dominant-baseline="middle" font-size="2.8" fill="${c.dim}">${v%1===0?v:v.toFixed(1)}</text>`;
+    }
+  }
 
   const tc=+(titleW/2).toFixed(1);
-  s+=`<text transform="rotate(-90,${tc},${H})" x="${tc}" y="${H}"
+  s+=`<text transform="rotate(-90,${tc},${totalH})" x="${tc}" y="${totalH}"
     text-anchor="start" dominant-baseline="middle"
     font-size="3" font-weight="700" letter-spacing=".5"
     fill="${c.dim}">${title.toUpperCase()}</text>`;
@@ -724,17 +764,17 @@ function buildGraphSVG(days, title, colors, yr, mo, graphW){
   for(let col=0;col<=nCols;col++){
     const x=+(plotX+col*colW).toFixed(2);
     const isEdge=col===0||col===nCols;
-    s+=`<line x1="${x}" y1="0" x2="${x}" y2="${H}" stroke="${isEdge?c.dim:c.line}" stroke-width="${isEdge?'.4':'.2'}"/>`;
+    s+=`<line x1="${x}" y1="${headerH}" x2="${x}" y2="${totalH}" stroke="${isEdge?c.dim:c.line}" stroke-width="${isEdge?'.4':'.2'}"/>`;
   }
 
   for(let d=1;d<=days;d++){
-    const yy=+(H-d*rowH).toFixed(2);
+    const yy=+(totalH-d*rowH).toFixed(2);
     const isWk=weekStarts.has(d);
     s+=`<line x1="${plotX}" y1="${yy}" x2="${plotX+plotW}" y2="${yy}" stroke="${isWk?c.dim:c.line}" stroke-width="${isWk?'.45':'.2'}" ${isWk?'stroke-dasharray="1.5,1"':''}/>`;
 
     const showLabel = d===1 || isWk || (d===days && !weekStarts.has(d));
     if(showLabel){
-      const cy=+(H-(d-.5)*rowH).toFixed(2);
+      const cy=+(totalH-(d-.5)*rowH).toFixed(2);
       const lx=+(plotX+plotW+lblW/2).toFixed(1);
       s+=`<text transform="rotate(-90,${lx},${cy})" x="${lx}" y="${cy}"
         text-anchor="middle" dominant-baseline="middle"
@@ -743,8 +783,8 @@ function buildGraphSVG(days, title, colors, yr, mo, graphW){
   }
 
   if(opts.graphborders){
-    s+=`<line x1="${plotX}" y1="0" x2="${plotX+plotW}" y2="0" stroke="${c.dim}" stroke-width=".4"/>`;
-    s+=`<line x1="${plotX}" y1="${H}" x2="${plotX+plotW}" y2="${H}" stroke="${c.dim}" stroke-width=".4"/>`;
+    s+=`<line x1="${plotX}" y1="${headerH}" x2="${plotX+plotW}" y2="${headerH}" stroke="${c.dim}" stroke-width=".4"/>`;
+    s+=`<line x1="${plotX}" y1="${totalH}" x2="${plotX+plotW}" y2="${totalH}" stroke="${c.dim}" stroke-width=".4"/>`;
   }
 
   s+=`</svg>`;
@@ -1512,20 +1552,7 @@ function mkCalendar(y,m,c){
   for(let i=0;i<flat.length;i+=7) allWeeks.push(flat.slice(i,i+7));
 
   if(opts.calSpread){
-    const mid=Math.ceil(allWeeks.length/2);
-    const p1=pg('calendar-1',colors); p1.classList.add('fcol');
-    const h1=el('div','sh',`${MONTHS[m]} ${y}`);
-    h1.style.cssText=`color:${colors.dim};border-bottom:.3pt solid ${colors.line};background:${colors.page};`;
-    p1.appendChild(h1);
-    mkCalendarGrid(p1,colors,wdayLabels,allWeeks.slice(0,mid));
-
-    const p2=pg('calendar-2',colors); p2.classList.add('fcol');
-    const h2=el('div','sh',`${MONTHS[m]} ${y} (cont.)`);
-    h2.style.cssText=`color:${colors.dim};border-bottom:.3pt solid ${colors.line};background:${colors.page};`;
-    p2.appendChild(h2);
-    mkCalendarGrid(p2,colors,wdayLabels,allWeeks.slice(mid));
-
-    return [p1,p2];
+    return mkCalendarColumnSpread(y,m,colors,allWeeks);
   } else {
     const p=pg('calendar',colors); p.classList.add('fcol');
     const hdr=el('div','sh',`${MONTHS[m]} ${y}`);
@@ -1534,6 +1561,81 @@ function mkCalendar(y,m,c){
     mkCalendarGrid(p,colors,wdayLabels,allWeeks);
     return [p];
   }
+}
+
+function mkCalendarColumnSpread(y,m,colors,weeks){
+  const weekDowOrder=opts.weekstart==='sunday'?[0,1,2,3,4,5,6]:[1,2,3,4,5,6,0];
+  const numWeeks=weeks.length;
+
+  const p1=pg('calendar-spread-1',colors); p1.classList.add('fcol');
+  const h1=el('div','sh',`${MONTHS[m]} ${y}`);
+  h1.style.cssText=`color:${colors.dim};border-bottom:.3pt solid ${colors.line};`;
+  p1.appendChild(h1);
+  p1.appendChild(buildSpreadHalf(colors,weeks,weekDowOrder,0,4,false,numWeeks));
+
+  const p2=pg('calendar-spread-2',colors); p2.classList.add('fcol');
+  const h2=el('div','sh',`${MONTHS[m]} ${y}`);
+  h2.style.cssText=`color:${colors.dim};border-bottom:.3pt solid ${colors.line};`;
+  p2.appendChild(h2);
+  p2.appendChild(buildSpreadHalf(colors,weeks,weekDowOrder,4,7,true,numWeeks));
+
+  return [p1,p2];
+}
+
+function buildSpreadHalf(colors,weeks,weekDowOrder,startPos,endPos,hasNotes,numWeeks){
+  const numDays=endPos-startPos;
+  const colFr=Array(numDays).fill('1fr').join(' ')+(hasNotes?' 1fr':'');
+  const grid=el('div','cal-sp-grid');
+  grid.style.gridTemplateColumns=colFr;
+  grid.style.gridTemplateRows=`auto repeat(${numWeeks},1fr)`;
+
+  // Day name headers
+  for(let pos=startPos;pos<endPos;pos++){
+    const di=weekDowOrder[pos];
+    const isWknd=di===0||di===6;
+    const hdr=el('div','cal-sp-dhdr',DOW_ABB3[di].toUpperCase());
+    hdr.style.cssText=`color:${isWknd?colors.dot:colors.dim};border-color:${colors.line};`;
+    grid.appendChild(hdr);
+  }
+  if(hasNotes){
+    const nhdr=el('div','cal-sp-dhdr','NOTES');
+    nhdr.style.cssText=`color:${colors.dim};border-color:${colors.line};`;
+    grid.appendChild(nhdr);
+  }
+
+  // Week rows
+  weeks.forEach(week=>{
+    for(let pos=startPos;pos<endPos;pos++){
+      const d=week[pos];
+      const di=weekDowOrder[pos];
+      const isWknd=di===0||di===6;
+      const isEmpty=d===0;
+      let cls='cal-sp-cell'+(isWknd?' weekend':'')+(isEmpty?' empty':'');
+      const cell=el('div',cls);
+      cell.style.borderColor=colors.line;
+      if(!isEmpty){
+        const dt=el('span','cal-sp-date',String(d));
+        dt.style.color=isWknd?colors.dot:colors.dim;
+        cell.appendChild(dt);
+      }
+      grid.appendChild(cell);
+    }
+    if(hasNotes){
+      const nc=el('div','cal-sp-notes');
+      nc.style.borderColor=colors.line;
+      for(let ci=0;ci<12;ci++){
+        const nr=el('div','cal-sp-nr');
+        const circ=el('div','cal-sp-circ');
+        circ.style.borderColor=colors.line;
+        const nl=el('div','cal-sp-nl');
+        nl.style.borderBottomColor=colors.line;
+        nr.appendChild(circ);nr.appendChild(nl);
+        nc.appendChild(nr);
+      }
+      grid.appendChild(nc);
+    }
+  });
+  return grid;
 }
 
 function mkMonthNotes(y,m,c){
@@ -1564,7 +1666,7 @@ function mkMonthGraphs(y,m,c){
   const wrap=el('div','gph-wrap');
   metrics.forEach(metric=>{
     const item=el('div','gph-item');
-    item.insertAdjacentHTML('beforeend',buildGraphSVG(days,metric.title,colors,y,m,graphW));
+    item.insertAdjacentHTML('beforeend',buildGraphSVG(days,metric,colors,y,m,graphW));
     wrap.appendChild(item);
   });
   p.appendChild(wrap);
