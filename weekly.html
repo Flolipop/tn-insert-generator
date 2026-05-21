@@ -56,6 +56,27 @@
           <label class="toggle-sw"><input type="checkbox" id="opt-coloricons" checked onchange="onOptionChange()"><span class="slider"></span></label>
           <span style="font-size:12px;">Colored icons</span>
         </div>
+        <div class="cfg-row" style="margin-top:8px;">
+          <label>Icon size</label>
+          <div class="range-row" style="flex:1;">
+            <input type="range" id="opt-iconsize" min="2" max="6" step="0.5" value="3.5" oninput="onRangeChange('opt-iconsize','iconsize-val','mm')">
+            <span class="range-val" id="iconsize-val">3.5mm</span>
+          </div>
+        </div>
+        <div class="cfg-row">
+          <label>Icon spacing</label>
+          <div class="range-row" style="flex:1;">
+            <input type="range" id="opt-icongap" min="0" max="4" step="0.5" value="1.5" oninput="onRangeChange('opt-icongap','icongap-val','mm')">
+            <span class="range-val" id="icongap-val">1.5mm</span>
+          </div>
+        </div>
+        <div class="cfg-row">
+          <label>Stroke weight</label>
+          <div class="range-row" style="flex:1;">
+            <input type="range" id="opt-iconstroke" min="0.5" max="3" step="0.25" value="1.5" oninput="onRangeChange('opt-iconstroke','iconstroke-val','')">
+            <span class="range-val" id="iconstroke-val">1.5</span>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -124,6 +145,66 @@
               <option value="6">6mm</option>
               <option value="7">7mm</option>
             </select>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Typography -->
+    <div class="coll-sec" id="sec-typo">
+      <div class="coll-hdr" onclick="toggleSection('sec-typo')">
+        <span class="coll-arrow">&#9654;</span> Typography
+      </div>
+      <div class="coll-body">
+        <div class="cfg-sec">
+          <div class="cfg-row">
+            <label>Week header</label>
+            <div class="range-row" style="flex:1;">
+              <input type="range" id="opt-fz-weekhdr" min="4" max="12" step="0.5" value="6" oninput="onRangeChange('opt-fz-weekhdr','fzweekhdr-val','pt')">
+              <span class="range-val" id="fzweekhdr-val">6pt</span>
+            </div>
+          </div>
+          <div class="cfg-row">
+            <label>Day name</label>
+            <div class="range-row" style="flex:1;">
+              <input type="range" id="opt-fz-dow" min="4" max="10" step="0.5" value="6" oninput="onRangeChange('opt-fz-dow','fzdow-val','pt')">
+              <span class="range-val" id="fzdow-val">6pt</span>
+            </div>
+          </div>
+          <div class="cfg-row">
+            <label>Day number</label>
+            <div class="range-row" style="flex:1;">
+              <input type="range" id="opt-fz-daynum" min="10" max="28" step="1" value="18" oninput="onRangeChange('opt-fz-daynum','fzdaynum-val','pt')">
+              <span class="range-val" id="fzdaynum-val">18pt</span>
+            </div>
+          </div>
+          <div class="cfg-row">
+            <label>Habit name</label>
+            <div class="range-row" style="flex:1;">
+              <input type="range" id="opt-fz-habit" min="4" max="10" step="0.5" value="6" oninput="onRangeChange('opt-fz-habit','fzhabit-val','pt')">
+              <span class="range-val" id="fzhabit-val">6pt</span>
+            </div>
+          </div>
+          <div class="cfg-row">
+            <label>Field label</label>
+            <div class="range-row" style="flex:1;">
+              <input type="range" id="opt-fz-fieldlbl" min="3" max="8" step="0.5" value="4.5" oninput="onRangeChange('opt-fz-fieldlbl','fzfieldlbl-val','pt')">
+              <span class="range-val" id="fzfieldlbl-val">4.5pt</span>
+            </div>
+          </div>
+          <div class="cfg-row">
+            <label>Mood icons</label>
+            <div class="range-row" style="flex:1;">
+              <input type="range" id="opt-fz-moodsz" min="3" max="8" step="0.5" value="5" oninput="onRangeChange('opt-fz-moodsz','fzmoodsz-val','mm')">
+              <span class="range-val" id="fzmoodsz-val">5mm</span>
+            </div>
+          </div>
+          <div class="cfg-row">
+            <label>Row spacing</label>
+            <div class="range-row" style="flex:1;">
+              <input type="range" id="opt-habrowgap" min="0.5" max="4" step="0.5" value="1.5" oninput="onRangeChange('opt-habrowgap','habrowgap-val','mm')">
+              <span class="range-val" id="habrowgap-val">1.5mm</span>
+            </div>
           </div>
         </div>
       </div>
