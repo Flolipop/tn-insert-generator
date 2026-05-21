@@ -15,6 +15,7 @@ let bottomBoxes = [];
 let selectedIcon = 'star';
 let pickerBuilt = false;
 let selectedDays = [0,1,2,3,4,5,6];
+let inspectorContext = {habitId:null, fieldId:null};
 const STORAGE_KEY = 'tn-weekly-planner';
 
 /* ── Theme presets ── */
@@ -96,6 +97,10 @@ let opts = {
   fzFieldLbl: 4.5,
   fzMoodSz: 5,
   habRowGap: 1.5,
+  moodGap: 2,
+  moonSize: 3.5,
+  elementColors: {},
+  elementFonts: {},
 };
 
 /* ── Constants ── */
@@ -140,6 +145,22 @@ const COVER_ACCENTS = {
 
 const MOOD_ICONS3 = ['frown','meh','smile'];
 const MOOD_ICONS5 = ['angry','frown','meh','smile','laugh'];
+
+function getElemColor(key, fallback){
+  return (opts.elementColors && opts.elementColors[key]) || fallback;
+}
+function getElemFont(key){
+  return (opts.elementFonts && opts.elementFonts[key]) || null;
+}
+function getPageColors(){
+  const c=getColors(); const seen=new Set(); const out=[];
+  const add=v=>{if(v&&!seen.has(v)){seen.add(v);out.push(v);}};
+  Object.values(c).forEach(add);
+  if(opts.colors) Object.values(opts.colors).forEach(add);
+  if(opts.elementColors) Object.values(opts.elementColors).forEach(add);
+  Object.values(ICON_COLORS).forEach(add);
+  return out;
+}
 
 const MONTHS   = ['January','February','March','April','May','June','July','August','September','October','November','December'];
 const DOW_FULL = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
@@ -384,6 +405,8 @@ function applyOptsToUI(){
     ['opt-fz-fieldlbl','fzfieldlbl-val',opts.fzFieldLbl??4.5,'pt'],
     ['opt-fz-moodsz','fzmoodsz-val',opts.fzMoodSz??5,'mm'],
     ['opt-habrowgap','habrowgap-val',opts.habRowGap??1.5,'mm'],
+    ['opt-moodgap','moodgap-val',opts.moodGap??2,'mm'],
+    ['opt-moonsize','moonsize-val',opts.moonSize??3.5,'mm'],
   ];
   rangeFields.forEach(([inpId,spanId,val,unit])=>{
     const inp=$(inpId); if(inp){inp.value=val; $(spanId).textContent=val+unit;}
@@ -445,6 +468,8 @@ function readOptsFromUI(){
   opts.fzFieldLbl=parseFloat($('opt-fz-fieldlbl').value)||4.5;
   opts.fzMoodSz=parseFloat($('opt-fz-moodsz').value)||5;
   opts.habRowGap=parseFloat($('opt-habrowgap').value)||1.5;
+  opts.moodGap=parseFloat($('opt-moodgap').value)||2;
+  opts.moonSize=parseFloat($('opt-moonsize').value)||3.5;
 }
 
 function onOptionChange(){
@@ -750,30 +775,40 @@ function onRangeChange(inputId, spanId, unit){
 
 const INSPECTOR_MAP=[
   {cls:'d-num',      label:'Day Number',    icon:'hash',          props:[
-    {type:'range', label:'Font size', key:'fzDayNum',  leftId:'opt-fz-daynum',  leftSpan:'fzdaynum-val',  min:10,max:28,step:1,   unit:'pt'},
-    {type:'color', label:'Color',    colorKey:'line'},
+    {type:'range',    label:'Font size', key:'fzDayNum',  leftId:'opt-fz-daynum',  leftSpan:'fzdaynum-val',  min:10,max:28,step:1,   unit:'pt'},
+    {type:'elemColor',label:'Color',    elemKey:'dayNum',    fallback:'line'},
+    {type:'elemFont', label:'Font',     elemKey:'dayNum'},
   ]},
   {cls:'d-dow',      label:'Day Name',      icon:'type',          props:[
-    {type:'range', label:'Font size', key:'fzDow',     leftId:'opt-fz-dow',     leftSpan:'fzdow-val',     min:4, max:10,step:0.5, unit:'pt'},
-    {type:'color', label:'Color',    colorKey:'dim'},
+    {type:'range',    label:'Font size', key:'fzDow',     leftId:'opt-fz-dow',     leftSpan:'fzdow-val',     min:4, max:10,step:0.5, unit:'pt'},
+    {type:'elemColor',label:'Color',    elemKey:'dayName',   fallback:'dim'},
+    {type:'elemFont', label:'Font',     elemKey:'dayName'},
+  ]},
+  {cls:'d-moon',     label:'Moon Phase',    icon:'moon',          props:[
+    {type:'range',    label:'Size',     key:'moonSize',   leftId:'opt-moonsize',   leftSpan:'moonsize-val',  min:2, max:6, step:0.5, unit:'mm'},
+    {type:'elemColor',label:'Color',   elemKey:'moonColor',  fallback:'dim'},
   ]},
   {cls:'sh',         label:'Section Header',icon:'heading-1',     props:[
-    {type:'range', label:'Font size', key:'fzWeekHdr', leftId:'opt-fz-weekhdr', leftSpan:'fzweekhdr-val', min:4, max:12,step:0.5, unit:'pt'},
-    {type:'color', label:'Color',    colorKey:'dim'},
+    {type:'range',    label:'Font size', key:'fzWeekHdr', leftId:'opt-fz-weekhdr', leftSpan:'fzweekhdr-val', min:4, max:12,step:0.5, unit:'pt'},
+    {type:'elemColor',label:'Color',    elemKey:'sectionHdr',fallback:'dim'},
+    {type:'elemFont', label:'Font',     elemKey:'sectionHdr'},
   ]},
   {cls:'d-hab-icon', label:'Habit Icon',    icon:'circle-dot',    props:[
-    {type:'range', label:'Size',    key:'iconSize',   leftId:'opt-iconsize',   leftSpan:'iconsize-val',   min:2, max:6, step:0.5, unit:'mm'},
-    {type:'range', label:'Stroke',  key:'iconStroke', leftId:'opt-iconstroke', leftSpan:'iconstroke-val', min:0.5,max:3,step:0.25,unit:''},
-    {type:'range', label:'Spacing', key:'iconGap',    leftId:'opt-icongap',    leftSpan:'icongap-val',    min:0, max:4, step:0.5, unit:'mm'},
+    {type:'range',    label:'Size',    key:'iconSize',   leftId:'opt-iconsize',   leftSpan:'iconsize-val',   min:2, max:6, step:0.5, unit:'mm'},
+    {type:'range',    label:'Stroke',  key:'iconStroke', leftId:'opt-iconstroke', leftSpan:'iconstroke-val', min:0.5,max:3,step:0.25,unit:''},
+    {type:'range',    label:'Spacing', key:'iconGap',    leftId:'opt-icongap',    leftSpan:'icongap-val',    min:0, max:4, step:0.5, unit:'mm'},
+    {type:'elemColor',label:'Color',   elemKey:'habitIcon', fallback:'dim'},
   ]},
   {cls:'wk-hab-name',label:'Week Habit',    icon:'list',          props:[
-    {type:'range', label:'Font size',key:'fzHabit',   leftId:'opt-fz-habit',   leftSpan:'fzhabit-val',   min:4, max:10,step:0.5, unit:'pt'},
-    {type:'range', label:'Icon size',key:'iconSize',  leftId:'opt-iconsize',   leftSpan:'iconsize-val',   min:2, max:6, step:0.5, unit:'mm'},
-    {type:'range', label:'Stroke',   key:'iconStroke',leftId:'opt-iconstroke', leftSpan:'iconstroke-val', min:0.5,max:3,step:0.25,unit:''},
+    {type:'range',    label:'Font size',key:'fzHabit',   leftId:'opt-fz-habit',   leftSpan:'fzhabit-val',   min:4, max:10,step:0.5, unit:'pt'},
+    {type:'range',    label:'Icon size',key:'iconSize',  leftId:'opt-iconsize',   leftSpan:'iconsize-val',   min:2, max:6, step:0.5, unit:'mm'},
+    {type:'range',    label:'Stroke',   key:'iconStroke',leftId:'opt-iconstroke', leftSpan:'iconstroke-val', min:0.5,max:3,step:0.25,unit:''},
+    {type:'elemColor',label:'Color',   elemKey:'habitIcon', fallback:'dim'},
   ]},
   {cls:'d-hab-name', label:'Habit Name',    icon:'text',          props:[
-    {type:'range', label:'Font size', key:'fzHabit',  leftId:'opt-fz-habit',   leftSpan:'fzhabit-val',   min:4, max:10,step:0.5, unit:'pt'},
-    {type:'color', label:'Color',    colorKey:'ink'},
+    {type:'range',    label:'Font size', key:'fzHabit',  leftId:'opt-fz-habit',   leftSpan:'fzhabit-val',   min:4, max:10,step:0.5, unit:'pt'},
+    {type:'elemColor',label:'Color',    elemKey:'habitName', fallback:'ink'},
+    {type:'elemFont', label:'Font',     elemKey:'habitName'},
   ]},
   {cls:'d-hab-row',  label:'Habit Row',     icon:'align-justify', props:[
     {type:'range',  label:'Row spacing', key:'habRowGap', leftId:'opt-habrowgap', leftSpan:'habrowgap-val', min:0.5,max:4,step:0.5,unit:'mm'},
@@ -787,14 +822,17 @@ const INSPECTOR_MAP=[
     {type:'range',  label:'Size',  key:'cbsize',   leftId:'opt-cbsize', min:3,max:7,step:1,unit:'mm'},
   ]},
   {cls:'d-faces',    label:'Mood Icons',    icon:'smile',         props:[
-    {type:'range',  label:'Size',   key:'fzMoodSz',   leftId:'opt-fz-moodsz',  leftSpan:'fzmoodsz-val',   min:3, max:8, step:0.5,unit:'mm'},
-    {type:'range',  label:'Stroke', key:'iconStroke',  leftId:'opt-iconstroke', leftSpan:'iconstroke-val', min:0.5,max:3,step:0.25,unit:''},
-    {type:'select', label:'Faces',  key:'moodfaces',   leftId:'opt-moodfaces',
+    {type:'range',    label:'Size',    key:'fzMoodSz',   leftId:'opt-fz-moodsz',  leftSpan:'fzmoodsz-val',   min:3, max:8, step:0.5, unit:'mm'},
+    {type:'range',    label:'Spacing', key:'moodGap',    leftId:'opt-moodgap',    leftSpan:'moodgap-val',    min:0, max:6, step:0.5, unit:'mm'},
+    {type:'range',    label:'Stroke',  key:'iconStroke', leftId:'opt-iconstroke', leftSpan:'iconstroke-val', min:0.5,max:3, step:0.25,unit:''},
+    {type:'select',   label:'Faces',   key:'moodfaces',  leftId:'opt-moodfaces',
       options:[['3','3 faces'],['5','5 faces']]},
+    {type:'elemColor',label:'Color',   elemKey:'moodIcons', fallback:'dim'},
   ]},
   {cls:'d-field-lbl',label:'Field Label',   icon:'tag',           props:[
-    {type:'range', label:'Font size', key:'fzFieldLbl', leftId:'opt-fz-fieldlbl', leftSpan:'fzfieldlbl-val', min:3,max:8,step:0.5,unit:'pt'},
-    {type:'color', label:'Color',    colorKey:'dim'},
+    {type:'range',    label:'Font size', key:'fzFieldLbl', leftId:'opt-fz-fieldlbl', leftSpan:'fzfieldlbl-val', min:3,max:8,step:0.5,unit:'pt'},
+    {type:'elemColor',label:'Color',    elemKey:'fieldLabel',fallback:'dim'},
+    {type:'elemFont', label:'Font',     elemKey:'fieldLabel'},
   ]},
   {cls:'d-fill',     label:'Background',    icon:'grid-2x2',      props:[
     {type:'select', label:'Pattern', key:'fillPattern', leftId:'opt-fillpattern',
@@ -805,13 +843,15 @@ const INSPECTOR_MAP=[
     {type:'color', label:'Line color', colorKey:'line'},
   ]},
   {cls:'cover-title',label:'Cover Title',   icon:'book-open',     props:[
-    {type:'select', label:'Font size', key:'coverFontSize', leftId:'opt-coverfontsize',
+    {type:'select',   label:'Font size', key:'coverFontSize', leftId:'opt-coverfontsize',
       options:[[8,'8pt'],[10,'10pt'],[12,'12pt'],[14,'14pt'],[16,'16pt'],[18,'18pt']]},
-    {type:'color', label:'Color', colorKey:'ink'},
+    {type:'elemColor',label:'Color',    elemKey:'coverTitle',fallback:'ink'},
+    {type:'elemFont', label:'Font',     elemKey:'coverTitle'},
   ]},
 ];
 
 function buildInspector(entry){
+  showInspector();
   $('insp-empty').style.display='none';
   const content=$('insp-content');
   content.style.display='block';
@@ -826,6 +866,17 @@ function buildInspector(entry){
   const propsEl=$('insp-props');
   propsEl.innerHTML='';
   const colors=getColors();
+
+  function appendPalette(row, inp){
+    const pal=el('div','color-palette');
+    getPageColors().forEach(c=>{
+      const sw=el('button','pal-swatch');
+      sw.type='button';sw.style.background=c;sw.title=c;
+      sw.onclick=e=>{e.stopPropagation();inp.value=c;inp.dispatchEvent(new Event('input'));};
+      pal.appendChild(sw);
+    });
+    row.appendChild(pal);
+  }
 
   entry.props.forEach(prop=>{
     const row=el('div','insp-row');
@@ -879,10 +930,87 @@ function buildInspector(entry){
         generate();
       };
       row.appendChild(inp);
+      appendPalette(row,inp);
+
+    }else if(prop.type==='elemColor'){
+      if(!opts.elementColors) opts.elementColors={};
+      const themeColor=colors[prop.fallback];
+      const val=opts.elementColors[prop.elemKey]||themeColor;
+      const inp=document.createElement('input');
+      inp.type='color';inp.value=val;
+      inp.oninput=()=>{ opts.elementColors[prop.elemKey]=inp.value; generate(); };
+      row.appendChild(inp);
+      appendPalette(row,inp);
+
+    }else if(prop.type==='elemFont'){
+      if(!opts.elementFonts) opts.elementFonts={};
+      const themeFont=activeFont();
+      const val=opts.elementFonts[prop.elemKey]||'';
+      const sel=document.createElement('select');
+      sel.className='insp-font-sel';
+      ['','Georgia','Times New Roman','Palatino','Garamond','Arial','Helvetica','Verdana','Trebuchet MS','Courier New'].forEach(f=>{
+        const o=document.createElement('option');
+        o.value=f;o.textContent=f||`Theme (${themeFont})`;
+        if(f===val) o.selected=true;
+        sel.appendChild(o);
+      });
+      sel.onchange=()=>{ opts.elementFonts[prop.elemKey]=sel.value; generate(); };
+      row.appendChild(sel);
     }
 
     propsEl.appendChild(row);
   });
+
+  // Habit data editor
+  if(inspectorContext.habitId!==null){
+    const h=habits.find(x=>x.id===inspectorContext.habitId);
+    if(h){
+      const sep=el('hr','insp-sep');
+      propsEl.appendChild(sep);
+      const nameRow=el('div','insp-row');
+      nameRow.appendChild(el('label','insp-lbl','Name'));
+      const nameInp=document.createElement('input');
+      nameInp.type='text';nameInp.value=h.name;nameInp.className='insp-text-inp';
+      nameInp.oninput=()=>{ h.name=nameInp.value; renderHabits(); generate(); };
+      nameRow.appendChild(nameInp);
+      propsEl.appendChild(nameRow);
+      const iconLbl=el('div','insp-row');
+      iconLbl.appendChild(el('label','insp-lbl','Icon'));
+      propsEl.appendChild(iconLbl);
+      const iconGrid=el('div','insp-icon-grid');
+      HABIT_ICONS.forEach(icon=>{
+        const btn=el('button','insp-icon-btn'+(h.icon===icon?' active':''));
+        btn.type='button';btn.title=icon;
+        btn.appendChild(lucideEl(icon,'12px','12px'));
+        btn.onclick=()=>{
+          h.icon=icon;
+          iconGrid.querySelectorAll('.insp-icon-btn').forEach(b=>b.classList.remove('active'));
+          btn.classList.add('active');
+          renderHabits();generate();
+          lucide.createIcons({el:iconGrid});
+        };
+        iconGrid.appendChild(btn);
+      });
+      lucide.createIcons({el:iconGrid});
+      propsEl.appendChild(iconGrid);
+    }
+  }
+
+  // Field data editor
+  if(inspectorContext.fieldId!==null){
+    const f=dailyFields.find(x=>x.id===inspectorContext.fieldId);
+    if(f){
+      const sep=el('hr','insp-sep');
+      propsEl.appendChild(sep);
+      const nameRow=el('div','insp-row');
+      nameRow.appendChild(el('label','insp-lbl','Label'));
+      const nameInp=document.createElement('input');
+      nameInp.type='text';nameInp.value=f.label;nameInp.className='insp-text-inp';
+      nameInp.oninput=()=>{ f.label=nameInp.value; renderDailyFields(); generate(); };
+      nameRow.appendChild(nameInp);
+      propsEl.appendChild(nameRow);
+    }
+  }
 }
 
 function showMobileInspector(){
@@ -890,6 +1018,14 @@ function showMobileInspector(){
 }
 function closeMobileInspector(){
   document.getElementById('inspector').classList.remove('insp-open');
+}
+function showInspector(){
+  document.getElementById('inspector').classList.remove('insp-hidden');
+}
+function closeInspector(){
+  document.getElementById('inspector').classList.add('insp-hidden');
+  $('insp-content').style.display='none';
+  $('insp-empty').style.display='flex';
 }
 
 function getPagePadding(){
@@ -1021,7 +1157,7 @@ function mkCover(y,m,c){
   switch(opts.coverDesign){
     case 'simple':
       p.style.cssText+=getFillStyle(colors);
-      p.appendChild(mkCoverTitle('cover-title',`color:${colors.ink};font-size:${fz}pt;`,titleText));
+      p.appendChild(mkCoverTitle('cover-title',`color:${getElemColor('coverTitle',colors.ink)};font-size:${fz}pt;`,titleText));
       const ss=el('div','cover-subtitle',sub);
       ss.style.color=colors.dim;
       p.appendChild(ss);
@@ -1124,7 +1260,7 @@ function mkCover(y,m,c){
       const inner=el('div','cover-inner-border');
       inner.style.borderColor=colors.line;
       p.appendChild(inner);
-      p.appendChild(mkCoverTitle('cover-title',`color:${colors.ink};font-size:${fz+2}pt;`,titleText));
+      p.appendChild(mkCoverTitle('cover-title',`color:${getElemColor('coverTitle',colors.ink)};font-size:${fz+2}pt;`,titleText));
       const fs=el('div','cover-subtitle',sub);
       fs.style.color=colors.dim;
       p.appendChild(fs);
@@ -1263,7 +1399,7 @@ function mkHabitMap(y,m,c){
 
   // Header
   const hdr=el('div','sh',`${MONTHS[m]} ${y} — Circle Habit Tracker`);
-  hdr.style.cssText=`color:${colors.dim};border-bottom:.3pt solid ${colors.line};font-size:5pt;`;
+  hdr.style.cssText=`color:${getElemColor('sectionHdr',colors.dim)};border-bottom:.3pt solid ${colors.line};font-size:5pt;`;
   p.appendChild(hdr);
 
   // Layout budget
@@ -1397,7 +1533,7 @@ function mkGoalsPage(y,m,c){
   const p=pg('goals',colors);
   p.classList.add('fcol');
   const hdr=el('div','sh',`${MONTHS[m]} ${y} — Goals`);
-  hdr.style.cssText=`color:${colors.dim};border-bottom:.3pt solid ${colors.line};`;
+  hdr.style.cssText=`color:${getElemColor('sectionHdr',colors.dim)};border-bottom:.3pt solid ${colors.line};`;
   p.appendChild(hdr);
 
   const goals=el('div','');
@@ -1439,7 +1575,7 @@ function mkMoodCalendar(y,m,c){
   const p=pg('mood-cal',colors);
   p.classList.add('fcol');
   const hdr=el('div','sh',`${MONTHS[m]} ${y} — Mood`);
-  hdr.style.cssText=`color:${colors.dim};border-bottom:.3pt solid ${colors.line};`;
+  hdr.style.cssText=`color:${getElemColor('sectionHdr',colors.dim)};border-bottom:.3pt solid ${colors.line};`;
   p.appendChild(hdr);
 
   const wdayLabels=getWdayLabels();
@@ -1506,7 +1642,7 @@ function mkExpenseTracker(y,m,c){
   const p=pg('expenses',colors);
   p.classList.add('fcol');
   const hdr=el('div','sh',`${MONTHS[m]} ${y} — Expenses`);
-  hdr.style.cssText=`color:${colors.dim};border-bottom:.3pt solid ${colors.line};`;
+  hdr.style.cssText=`color:${getElemColor('sectionHdr',colors.dim)};border-bottom:.3pt solid ${colors.line};`;
   p.appendChild(hdr);
 
   const sz=tnSize();
@@ -1551,7 +1687,7 @@ function mkReflection(y,m,c){
   const p=pg('reflection',colors);
   p.classList.add('fcol');
   const hdr=el('div','sh',`${MONTHS[m]} ${y} — Reflection`);
-  hdr.style.cssText=`color:${colors.dim};border-bottom:.3pt solid ${colors.line};`;
+  hdr.style.cssText=`color:${getElemColor('sectionHdr',colors.dim)};border-bottom:.3pt solid ${colors.line};`;
   p.appendChild(hdr);
 
   const sections=[
@@ -1741,7 +1877,7 @@ function mkCalendar(y,m,c){
   } else {
     const p=pg('calendar',colors); p.classList.add('fcol');
     const hdr=el('div','sh',`${MONTHS[m]} ${y}`);
-    hdr.style.cssText=`color:${colors.dim};border-bottom:.3pt solid ${colors.line};background:${colors.page};`;
+    hdr.style.cssText=`color:${getElemColor('sectionHdr',colors.dim)};border-bottom:.3pt solid ${colors.line};background:${colors.page};`;
     p.appendChild(hdr);
     mkCalendarGrid(p,colors,wdayLabels,allWeeks);
     return [p];
@@ -1754,13 +1890,13 @@ function mkCalendarColumnSpread(y,m,colors,weeks){
 
   const p1=pg('calendar-spread-1',colors); p1.classList.add('fcol');
   const h1=el('div','sh',`${MONTHS[m]} ${y}`);
-  h1.style.cssText=`color:${colors.dim};border-bottom:.3pt solid ${colors.line};`;
+  h1.style.cssText=`color:${getElemColor('sectionHdr',colors.dim)};border-bottom:.3pt solid ${colors.line};`;
   p1.appendChild(h1);
   p1.appendChild(buildSpreadHalf(colors,weeks,weekDowOrder,0,4,false,numWeeks));
 
   const p2=pg('calendar-spread-2',colors); p2.classList.add('fcol');
   const h2=el('div','sh',`${MONTHS[m]} ${y}`);
-  h2.style.cssText=`color:${colors.dim};border-bottom:.3pt solid ${colors.line};`;
+  h2.style.cssText=`color:${getElemColor('sectionHdr',colors.dim)};border-bottom:.3pt solid ${colors.line};`;
   p2.appendChild(h2);
   p2.appendChild(buildSpreadHalf(colors,weeks,weekDowOrder,4,7,true,numWeeks));
 
@@ -1828,7 +1964,7 @@ function mkMonthNotes(y,m,c){
   const p=pg('monthly-notes',colors);
   p.style.cssText+=getFillStyle(colors);
   const h=el('div','sh',`${MONTHS[m]} ${y} — Notes`);
-  h.style.cssText=`color:${colors.dim};border-bottom:.3pt solid ${colors.line};background:${colors.page};`;
+  h.style.cssText=`color:${getElemColor('sectionHdr',colors.dim)};border-bottom:.3pt solid ${colors.line};background:${colors.page};`;
   p.appendChild(h);
   return p;
 }
@@ -1840,7 +1976,7 @@ function mkMonthGraphs(y,m,c){
   const metrics=graphMetrics.length>0?graphMetrics:[{id:0,title:'Weight'},{id:0,title:'Steps'}];
   const titleList=metrics.map(mt=>mt.title).join(' & ');
   const hdr=el('div','sh',`${MONTHS[m]} ${y} — ${titleList}`);
-  hdr.style.cssText=`color:${colors.dim};border-bottom:.3pt solid ${colors.line};`;
+  hdr.style.cssText=`color:${getElemColor('sectionHdr',colors.dim)};border-bottom:.3pt solid ${colors.line};`;
   p.appendChild(hdr);
 
   const days=daysInMonth(y,m);
@@ -1866,7 +2002,7 @@ function mkWeekSummary(y,m,wn,wdays,c){
   p.classList.add('fcol');
   const valid=wdays.filter(d=>d>0);
   const hdr=el('div','sh',`Week ${wn} · ${MONTHS[m]} ${valid[0]}–${valid[valid.length-1]}`);
-  hdr.style.cssText=`color:${colors.dim};border-bottom:.3pt solid ${colors.line};`;
+  hdr.style.cssText=`color:${getElemColor('sectionHdr',colors.dim)};border-bottom:.3pt solid ${colors.line};`;
   p.appendChild(hdr);
 
   const sec=el('div','wk-hab-sec');
@@ -1882,11 +2018,12 @@ function mkWeekSummary(y,m,wn,wdays,c){
   const habitsToShow=habits.length>0?habits:[{icon:'star',name:'Add habits',days:[0,1,2,3,4,5,6]}];
   habitsToShow.forEach(h=>{
     const nameCell=el('span','wk-hab-name');
+    if(h.id) nameCell.dataset.habitId=h.id;
     const ico=lucideEl(h.icon,(opts.iconSize??3.5)+'mm',(opts.iconSize??3.5)+'mm');
-    ico.style.color=iconColor(h.icon,colors.dim);
+    ico.style.color=getElemColor('habitIcon',iconColor(h.icon,colors.dim));
     nameCell.appendChild(ico);
     nameCell.appendChild(el('span','',h.name));
-    nameCell.style.color=colors.dim;
+    nameCell.style.color=getElemColor('habitName',colors.dim);
     sec.appendChild(nameCell);
     wdays.forEach((d,i)=>{
       const cell=el('div','wk-hab-cell');
@@ -1946,23 +2083,24 @@ function mkDay(y,m,d,c){
   const hdr=el('div','d-hdr');
   hdr.style.cssText=`border-bottom:.3pt solid ${colors.line};`;
   const dowEl=el('span','d-dow',DOW_FULL[w]);
-  dowEl.style.color=colors.dim;
+  dowEl.style.color=getElemColor('dayName',colors.dim);
   hdr.appendChild(dowEl);
   if(opts.moonPhase){
     const phase=getMoonPhase(y,m,d);
-    const moonWrap=el('span','');
-    moonWrap.style.cssText=`position:absolute;left:50%;transform:translateX(-50%);bottom:1.5mm;display:inline-flex;align-items:flex-end;opacity:.55;`;
-    moonWrap.innerHTML=moonPhaseSVG(phase,'3.5mm',colors.dim);
+    const moonWrap=el('span','d-moon');
+    moonWrap.style.cssText=`position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:inline-flex;align-items:center;justify-content:center;opacity:.55;`;
+    moonWrap.innerHTML=moonPhaseSVG(phase,(opts.moonSize??3.5)+'mm',getElemColor('moonColor',colors.dim));
     hdr.appendChild(moonWrap);
   }
   const numEl=el('span','d-num',d);
-  numEl.style.color=colors.line;
+  numEl.style.color=getElemColor('dayNum',colors.line);
   hdr.appendChild(numEl);
   p.appendChild(hdr);
 
   const msw=el('div','d-msw');
   if(opts.mood){
     const faces=el('div','d-faces');
+    faces.style.color=getElemColor('moodIcons',colors.dim);
     const moodIcons=opts.moodfaces===3?MOOD_ICONS3:MOOD_ICONS5;
     moodIcons.forEach(name=>{
       const icon=lucideEl(name,(opts.fzMoodSz??5)+'mm',(opts.fzMoodSz??5)+'mm');
@@ -1974,7 +2112,8 @@ function mkDay(y,m,d,c){
   dailyFields.forEach(f=>{
     const field=el('div','d-field');
     const lbl=el('span','d-field-lbl',f.label);
-    lbl.style.color=colors.dim;
+    lbl.style.color=getElemColor('fieldLabel',colors.dim);
+    lbl.dataset.fieldId=f.id;
     field.appendChild(lbl);
     const line=el('div','d-field-line');
     line.style.borderBottom=`.3pt solid ${colors.dim}`;
@@ -1993,15 +2132,16 @@ function mkDay(y,m,d,c){
   const todayHabits=habits.filter(h=>!h.days||h.days.includes(wdayIdx));
   todayHabits.forEach(h=>{
     const row=el('div','d-hab-row');
+    row.dataset.habitId=h.id;
     const box=el('div','d-box');
     box.style.cssText=`border:.5pt solid ${colors.dim};${getCheckboxStyle()}`;
     row.appendChild(box);
     const ico=el('span','d-hab-icon');
-    ico.style.color=iconColor(h.icon,colors.dim);
+    ico.style.color=getElemColor('habitIcon',iconColor(h.icon,colors.dim));
     ico.appendChild(lucideEl(h.icon,(opts.iconSize??3.5)+'mm',(opts.iconSize??3.5)+'mm'));
     row.appendChild(ico);
     const name=el('span','d-hab-name',h.name);
-    name.style.color=colors.ink;
+    name.style.color=getElemColor('habitName',colors.ink);
     row.appendChild(name);
     habList.appendChild(row);
   });
@@ -2028,7 +2168,7 @@ function mkDay(y,m,d,c){
 /* ══════════════════════════════════════════════
    VIEW MODES
    ══════════════════════════════════════════════ */
-let currentView='print';
+let currentView='pages';
 function setView(mode){
   currentView=mode;
   $('print-area').style.display=mode==='print'?'':'none';
@@ -2077,6 +2217,14 @@ function generate(){
   root.style.setProperty('--fz-fieldlbl',(opts.fzFieldLbl??4.5)+'pt');
   root.style.setProperty('--mood-sz',    (opts.fzMoodSz??5)+'mm');
   root.style.setProperty('--hab-row-gap',(opts.habRowGap??1.5)+'mm');
+  root.style.setProperty('--mood-gap',   (opts.moodGap??2)+'mm');
+  const ef=key=>`'${getElemFont(key)||activeFont()}',serif`;
+  root.style.setProperty('--ef-daynum',  ef('dayNum'));
+  root.style.setProperty('--ef-dayname', ef('dayName'));
+  root.style.setProperty('--ef-sechdr',  ef('sectionHdr'));
+  root.style.setProperty('--ef-habname', ef('habitName'));
+  root.style.setProperty('--ef-fieldlbl',ef('fieldLabel'));
+  root.style.setProperty('--ef-cover',   ef('coverTitle'));
   let ps=document.getElementById('dynamic-page-style');
   if(!ps){ps=document.createElement('style');ps.id='dynamic-page-style';document.head.appendChild(ps);}
   ps.textContent='@page{size:'+paper.page+';margin:0;}';
@@ -2295,9 +2443,16 @@ $('daily-field-name').addEventListener('keydown',e=>{if(e.key==='Enter')addDaily
 
 $('page-preview').addEventListener('click',function(e){
   let node=e.target;
+  inspectorContext={habitId:null,fieldId:null};
   while(node&&node!==this){
     for(const m of INSPECTOR_MAP){
       if(node.classList.contains(m.cls)){
+        let ctx=node;
+        while(ctx&&ctx!==this){
+          if(ctx.dataset.habitId) inspectorContext.habitId=parseInt(ctx.dataset.habitId);
+          if(ctx.dataset.fieldId) inspectorContext.fieldId=parseInt(ctx.dataset.fieldId);
+          ctx=ctx.parentElement;
+        }
         buildInspector(m);
         if(window.innerWidth<=768) showMobileInspector();
         return;
@@ -2305,6 +2460,10 @@ $('page-preview').addEventListener('click',function(e){
     }
     node=node.parentElement;
   }
+  closeInspector();
 });
 
+document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeInspector(); });
+
 generate();
+setView(currentView);
