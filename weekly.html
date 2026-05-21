@@ -563,6 +563,19 @@
   <div id="book-view"></div>
 </div>
 
+<!-- ══ INSPECTOR ══ -->
+<div id="inspector">
+  <div id="insp-empty">
+    <span data-lucide="mouse-pointer-click" style="width:28px;height:28px;display:block;"></span>
+    <p>Click any element<br>in the preview<br>to inspect it</p>
+  </div>
+  <div id="insp-content" style="display:none;">
+    <div id="insp-header"></div>
+    <div id="insp-props"></div>
+  </div>
+  <button id="insp-close-btn" class="btn btn-s btn-sm" onclick="closeMobileInspector()">&#10005; Close</button>
+</div>
+
 <script src="weekly.js"></script>
 </body>
 </html>

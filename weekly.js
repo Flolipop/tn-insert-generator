@@ -748,44 +748,148 @@ function onRangeChange(inputId, spanId, unit){
   onOptionChange();
 }
 
-const CLICK_MAP=[
-  {cls:'sh',          sec:'sec-daily',  ctrl:'opt-weekstart'},
-  {cls:'d-dow',       sec:'sec-typo',   ctrl:'opt-fz-dow'},
-  {cls:'d-num',       sec:'sec-typo',   ctrl:'opt-fz-daynum'},
-  {cls:'d-hab-name',  sec:'sec-typo',   ctrl:'opt-fz-habit'},
-  {cls:'d-hab-icon',  sec:'sec-habits', ctrl:'opt-iconsize'},
-  {cls:'d-hab-row',   sec:'sec-habits', ctrl:'opt-iconsize'},
-  {cls:'wk-hab-name', sec:'sec-habits', ctrl:'opt-iconsize'},
-  {cls:'d-faces',     sec:'sec-daily',  ctrl:'opt-moodfaces'},
-  {cls:'d-field',     sec:'sec-typo',   ctrl:'opt-fz-fieldlbl'},
-  {cls:'d-fill',      sec:'sec-style',  ctrl:'opt-fillpattern'},
-  {cls:'cover-title', sec:'sec-cover',  ctrl:'opt-coverfontsize'},
+const INSPECTOR_MAP=[
+  {cls:'d-num',      label:'Day Number',    icon:'hash',          props:[
+    {type:'range', label:'Font size', key:'fzDayNum',  leftId:'opt-fz-daynum',  leftSpan:'fzdaynum-val',  min:10,max:28,step:1,   unit:'pt'},
+    {type:'color', label:'Color',    colorKey:'line'},
+  ]},
+  {cls:'d-dow',      label:'Day Name',      icon:'type',          props:[
+    {type:'range', label:'Font size', key:'fzDow',     leftId:'opt-fz-dow',     leftSpan:'fzdow-val',     min:4, max:10,step:0.5, unit:'pt'},
+    {type:'color', label:'Color',    colorKey:'dim'},
+  ]},
+  {cls:'sh',         label:'Section Header',icon:'heading-1',     props:[
+    {type:'range', label:'Font size', key:'fzWeekHdr', leftId:'opt-fz-weekhdr', leftSpan:'fzweekhdr-val', min:4, max:12,step:0.5, unit:'pt'},
+    {type:'color', label:'Color',    colorKey:'dim'},
+  ]},
+  {cls:'d-hab-icon', label:'Habit Icon',    icon:'circle-dot',    props:[
+    {type:'range', label:'Size',    key:'iconSize',   leftId:'opt-iconsize',   leftSpan:'iconsize-val',   min:2, max:6, step:0.5, unit:'mm'},
+    {type:'range', label:'Stroke',  key:'iconStroke', leftId:'opt-iconstroke', leftSpan:'iconstroke-val', min:0.5,max:3,step:0.25,unit:''},
+    {type:'range', label:'Spacing', key:'iconGap',    leftId:'opt-icongap',    leftSpan:'icongap-val',    min:0, max:4, step:0.5, unit:'mm'},
+  ]},
+  {cls:'wk-hab-name',label:'Week Habit',    icon:'list',          props:[
+    {type:'range', label:'Font size',key:'fzHabit',   leftId:'opt-fz-habit',   leftSpan:'fzhabit-val',   min:4, max:10,step:0.5, unit:'pt'},
+    {type:'range', label:'Icon size',key:'iconSize',  leftId:'opt-iconsize',   leftSpan:'iconsize-val',   min:2, max:6, step:0.5, unit:'mm'},
+    {type:'range', label:'Stroke',   key:'iconStroke',leftId:'opt-iconstroke', leftSpan:'iconstroke-val', min:0.5,max:3,step:0.25,unit:''},
+  ]},
+  {cls:'d-hab-name', label:'Habit Name',    icon:'text',          props:[
+    {type:'range', label:'Font size', key:'fzHabit',  leftId:'opt-fz-habit',   leftSpan:'fzhabit-val',   min:4, max:10,step:0.5, unit:'pt'},
+    {type:'color', label:'Color',    colorKey:'ink'},
+  ]},
+  {cls:'d-hab-row',  label:'Habit Row',     icon:'align-justify', props:[
+    {type:'range',  label:'Row spacing', key:'habRowGap', leftId:'opt-habrowgap', leftSpan:'habrowgap-val', min:0.5,max:4,step:0.5,unit:'mm'},
+    {type:'select', label:'Checkbox',    key:'checkbox',  leftId:'opt-checkbox',
+      options:[['square','Square'],['circle','Circle'],['rounded','Rounded'],['diamond','Diamond']]},
+    {type:'range',  label:'Box size',    key:'cbsize',    leftId:'opt-cbsize',    min:3,max:7,step:1,unit:'mm'},
+  ]},
+  {cls:'d-box',      label:'Checkbox',      icon:'square',        props:[
+    {type:'select', label:'Style', key:'checkbox', leftId:'opt-checkbox',
+      options:[['square','Square'],['circle','Circle'],['rounded','Rounded'],['diamond','Diamond']]},
+    {type:'range',  label:'Size',  key:'cbsize',   leftId:'opt-cbsize', min:3,max:7,step:1,unit:'mm'},
+  ]},
+  {cls:'d-faces',    label:'Mood Icons',    icon:'smile',         props:[
+    {type:'range',  label:'Size',   key:'fzMoodSz',   leftId:'opt-fz-moodsz',  leftSpan:'fzmoodsz-val',   min:3, max:8, step:0.5,unit:'mm'},
+    {type:'range',  label:'Stroke', key:'iconStroke',  leftId:'opt-iconstroke', leftSpan:'iconstroke-val', min:0.5,max:3,step:0.25,unit:''},
+    {type:'select', label:'Faces',  key:'moodfaces',   leftId:'opt-moodfaces',
+      options:[['3','3 faces'],['5','5 faces']]},
+  ]},
+  {cls:'d-field-lbl',label:'Field Label',   icon:'tag',           props:[
+    {type:'range', label:'Font size', key:'fzFieldLbl', leftId:'opt-fz-fieldlbl', leftSpan:'fzfieldlbl-val', min:3,max:8,step:0.5,unit:'pt'},
+    {type:'color', label:'Color',    colorKey:'dim'},
+  ]},
+  {cls:'d-fill',     label:'Background',    icon:'grid-2x2',      props:[
+    {type:'select', label:'Pattern', key:'fillPattern', leftId:'opt-fillpattern',
+      options:[['dots','Dots'],['grid','Grid'],['lines','Lines'],['hex','Hex'],['empty','Empty']]},
+    {type:'select', label:'Spacing', key:'dotgrid', leftId:'opt-dotgrid',
+      options:[['3','3mm'],['4','4mm'],['5','5mm'],['6','6mm']]},
+    {type:'color', label:'Dot color',  colorKey:'dot'},
+    {type:'color', label:'Line color', colorKey:'line'},
+  ]},
+  {cls:'cover-title',label:'Cover Title',   icon:'book-open',     props:[
+    {type:'select', label:'Font size', key:'coverFontSize', leftId:'opt-coverfontsize',
+      options:[[8,'8pt'],[10,'10pt'],[12,'12pt'],[14,'14pt'],[16,'16pt'],[18,'18pt']]},
+    {type:'color', label:'Color', colorKey:'ink'},
+  ]},
 ];
 
-function focusSetting(secId,ctrlId){
-  const cfg=document.getElementById('cfg');
-  if(!cfg.classList.contains('open')){
-    cfg.classList.add('open');
-    document.getElementById('menu-backdrop').style.display='block';
-  }
-  const sec=document.getElementById(secId);
-  const body=sec.querySelector('.coll-body');
-  if(!body.classList.contains('open')){
-    body.classList.add('open');
-    sec.querySelector('.coll-hdr').classList.add('open');
-  }
-  setTimeout(()=>{
-    sec.scrollIntoView({behavior:'smooth',block:'start'});
-    if(ctrlId){
-      const ctrl=document.getElementById(ctrlId);
-      if(ctrl){
-        ctrl.classList.remove('cfg-flash');
-        void ctrl.offsetWidth;
-        ctrl.classList.add('cfg-flash');
-        setTimeout(()=>ctrl.classList.remove('cfg-flash'),1600);
-      }
+function buildInspector(entry){
+  $('insp-empty').style.display='none';
+  const content=$('insp-content');
+  content.style.display='block';
+
+  const hdr=$('insp-header');
+  hdr.innerHTML='';
+  const ico=lucideEl(entry.icon,'14px','14px');
+  hdr.appendChild(ico);
+  hdr.appendChild(document.createTextNode(' '+entry.label));
+  lucide.createIcons({el:hdr});
+
+  const propsEl=$('insp-props');
+  propsEl.innerHTML='';
+  const colors=getColors();
+
+  entry.props.forEach(prop=>{
+    const row=el('div','insp-row');
+    row.appendChild(el('label','insp-lbl',prop.label));
+
+    if(prop.type==='range'){
+      const val=opts[prop.key]??parseFloat(document.getElementById(prop.leftId)?.value)??prop.min;
+      const wrap=el('div','range-row');
+      const inp=document.createElement('input');
+      inp.type='range';inp.min=prop.min;inp.max=prop.max;inp.step=prop.step;inp.value=val;
+      const span=el('span','range-val',val+prop.unit);
+      inp.oninput=()=>{
+        const v=parseFloat(inp.value);
+        span.textContent=v+prop.unit;
+        opts[prop.key]=v;
+        const li=document.getElementById(prop.leftId);
+        if(li) li.value=v;
+        if(prop.leftSpan) document.getElementById(prop.leftSpan).textContent=v+prop.unit;
+        generate();
+      };
+      wrap.appendChild(inp);wrap.appendChild(span);
+      row.appendChild(wrap);
+
+    }else if(prop.type==='select'){
+      const val=String(opts[prop.key]??document.getElementById(prop.leftId)?.value??prop.options[0][0]);
+      const sel=document.createElement('select');
+      prop.options.forEach(([v,lbl])=>{
+        const o=document.createElement('option');
+        o.value=v;o.textContent=lbl;
+        if(String(v)===val) o.selected=true;
+        sel.appendChild(o);
+      });
+      sel.onchange=()=>{
+        const raw=sel.value;
+        const v=isNaN(raw)?raw:(Number.isInteger(+raw)?parseInt(raw):parseFloat(raw));
+        opts[prop.key]=v;
+        const li=document.getElementById(prop.leftId);
+        if(li) li.value=raw;
+        generate();
+      };
+      row.appendChild(sel);
+
+    }else if(prop.type==='color'){
+      const val=opts.colors[prop.colorKey]||colors[prop.colorKey];
+      const inp=document.createElement('input');
+      inp.type='color';inp.value=val;
+      inp.oninput=()=>{
+        opts.colors[prop.colorKey]=inp.value;
+        const li=document.querySelector(`#color-overrides input[data-key="${prop.colorKey}"]`);
+        if(li) li.value=inp.value;
+        generate();
+      };
+      row.appendChild(inp);
     }
-  },80);
+
+    propsEl.appendChild(row);
+  });
+}
+
+function showMobileInspector(){
+  document.getElementById('inspector').classList.add('insp-open');
+}
+function closeMobileInspector(){
+  document.getElementById('inspector').classList.remove('insp-open');
 }
 
 function getPagePadding(){
@@ -2192,8 +2296,12 @@ $('daily-field-name').addEventListener('keydown',e=>{if(e.key==='Enter')addDaily
 $('page-preview').addEventListener('click',function(e){
   let node=e.target;
   while(node&&node!==this){
-    for(const m of CLICK_MAP){
-      if(node.classList.contains(m.cls)){focusSetting(m.sec,m.ctrl);return;}
+    for(const m of INSPECTOR_MAP){
+      if(node.classList.contains(m.cls)){
+        buildInspector(m);
+        if(window.innerWidth<=768) showMobileInspector();
+        return;
+      }
     }
     node=node.parentElement;
   }
