@@ -900,8 +900,8 @@ function buildInspector(entry){
 
   function mkResetBtn(onReset){
     const rb=el('button','insp-reset-btn','↺');
-    rb.title='Double-click to reset';
-    rb.ondblclick=e=>{ e.stopPropagation(); onReset(); };
+    rb.title='Reset to default';
+    rb.onclick=e=>{ e.stopPropagation(); onReset(); };
     return rb;
   }
   function mkLabelRow(label, rb){
@@ -1086,13 +1086,13 @@ function buildInspector(entry){
         'Icon color',
         ()=>h.iconColor||null,
         v=>{ if(v)h.iconColor=v; else delete h.iconColor; },
-        getHabitIconColor(h,colors)
+        getElemColor('habitIcon', iconColor(h.icon, colors.dim))
       ));
       propsEl.appendChild(mkHabitColorRow(
         'Name color',
         ()=>h.color||null,
         v=>{ if(v)h.color=v; else delete h.color; },
-        getHabitNameColor(h,colors)
+        getElemColor('habitName', colors.ink)
       ));
 
       const fontRow=el('div','insp-row');
