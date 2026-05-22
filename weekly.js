@@ -7,6 +7,18 @@ function toggleMenu(){
   bd.style.display=cfg.classList.contains('open')?'block':'none';
 }
 
+let previewZoom=1;
+function adjustZoom(delta){
+  previewZoom=Math.max(0.25,Math.min(3,Math.round((previewZoom+delta)*10)/10));
+  const z=previewZoom;
+  ['page-preview','book-view','print-area'].forEach(id=>{
+    const el=document.getElementById(id);
+    if(el) el.style.zoom=z;
+  });
+  const lbl=document.getElementById('zoom-level');
+  if(lbl) lbl.textContent=Math.round(z*100)+'%';
+}
+
 /* ══════════════════════════════════════════════
    STATE & DEFAULTS
    ══════════════════════════════════════════════ */
@@ -87,7 +99,7 @@ let opts = {
   expenseTracker: false,
   reflectionPage: false,
   moonPhase: false,
-  iconSize: 3.5,
+  iconSize: 5,
   iconGap: 1.5,
   iconStroke: 1.5,
   fzWeekHdr: 6,
@@ -104,7 +116,7 @@ let opts = {
 };
 
 const OPT_DEFAULTS = {
-  habRowGap:1.5, checkbox:'square', cbsize:5, iconSize:3.5, iconStroke:1.5, iconGap:1.5,
+  habRowGap:1.5, checkbox:'square', cbsize:5, iconSize:5, iconStroke:1.5, iconGap:1.5,
   fzHabit:6, fzDayNum:18, fzDow:6, fzWeekHdr:6, fzFieldLbl:4.5, fzMoodSz:5,
   moonSize:3.5, moodGap:2, moodfaces:5, coverFontSize:12, fillPattern:'dots', dotgrid:5, graphcol:1,
 };
@@ -412,7 +424,7 @@ function applyOptsToUI(){
   if(opts.flip==='short') $('flip-short').checked=true;
   else $('flip-long').checked=true;
   const rangeFields=[
-    ['opt-iconsize','iconsize-val',opts.iconSize??3.5,'mm'],
+    ['opt-iconsize','iconsize-val',opts.iconSize??5,'mm'],
     ['opt-icongap','icongap-val',opts.iconGap??1.5,'mm'],
     ['opt-iconstroke','iconstroke-val',opts.iconStroke??1.5,''],
     ['opt-fz-weekhdr','fzweekhdr-val',opts.fzWeekHdr??6,'pt'],
@@ -475,7 +487,7 @@ function readOptsFromUI(){
   opts.linkFieldsGraphs=$('opt-linkfg').checked;
   opts.flip=document.querySelector('input[name="flip"]:checked')?.value||'long';
   opts.moonPhase=$('opt-moonphase').checked;
-  opts.iconSize=parseFloat($('opt-iconsize').value)||3.5;
+  opts.iconSize=parseFloat($('opt-iconsize').value)||5;
   opts.iconGap=parseFloat($('opt-icongap').value)||1.5;
   opts.iconStroke=parseFloat($('opt-iconstroke').value)||1.5;
   opts.fzWeekHdr=parseFloat($('opt-fz-weekhdr').value)||6;
@@ -2135,7 +2147,7 @@ function mkWeekSummary(y,m,wn,wdays,c){
   habitsToShow.forEach(h=>{
     const nameCell=el('span','wk-hab-name');
     if(h.id) nameCell.dataset.habitId=h.id;
-    const ico=lucideEl(h.icon,(opts.iconSize??3.5)+'mm',(opts.iconSize??3.5)+'mm');
+    const ico=lucideEl(h.icon,(opts.iconSize??5)+'mm',(opts.iconSize??5)+'mm');
     ico.style.color=getHabitIconColor(h,colors);
     nameCell.appendChild(ico);
     const textSpan=el('span','',h.name);
@@ -2328,7 +2340,7 @@ function generate(){
   root.style.setProperty('--spread-top', spreadTop+'mm');
   root.style.setProperty('--spread-left', spreadLeft+'mm');
   root.style.setProperty('--fold-x',(paper.w/2)+'mm');
-  root.style.setProperty('--icon-sz',    (opts.iconSize??3.5)+'mm');
+  root.style.setProperty('--icon-sz',    (opts.iconSize??5)+'mm');
   root.style.setProperty('--icon-gap',   (opts.iconGap??1.5)+'mm');
   root.style.setProperty('--icon-stroke',(opts.iconStroke??1.5));
   root.style.setProperty('--fz-weekhdr', (opts.fzWeekHdr??6)+'pt');
@@ -2585,6 +2597,34 @@ $('page-preview').addEventListener('click',function(e){
 });
 
 document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeInspector(); });
+
+// Ctrl+wheel zoom
+$('preview').addEventListener('wheel',e=>{
+  if(!e.ctrlKey) return;
+  e.preventDefault();
+  adjustZoom(e.deltaY<0?0.1:-0.1);
+},{passive:false});
+
+// Pinch-to-zoom
+let _pinchDist=null;
+$('preview').addEventListener('touchstart',e=>{
+  if(e.touches.length===2){
+    const dx=e.touches[0].clientX-e.touches[1].clientX;
+    const dy=e.touches[0].clientY-e.touches[1].clientY;
+    _pinchDist=Math.hypot(dx,dy);
+  }
+},{passive:true});
+$('preview').addEventListener('touchmove',e=>{
+  if(e.touches.length!==2||_pinchDist===null) return;
+  e.preventDefault();
+  const dx=e.touches[0].clientX-e.touches[1].clientX;
+  const dy=e.touches[0].clientY-e.touches[1].clientY;
+  const dist=Math.hypot(dx,dy);
+  const delta=(dist-_pinchDist)/200;
+  _pinchDist=dist;
+  adjustZoom(delta);
+},{passive:false});
+$('preview').addEventListener('touchend',()=>{ _pinchDist=null; },{passive:true});
 
 generate();
 setView(currentView);
