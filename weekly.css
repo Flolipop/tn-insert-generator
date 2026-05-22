@@ -138,12 +138,16 @@ input::placeholder{color:rgba(255,255,255,.4);}
 .d-dow{font-size:var(--fz-dow,6pt);font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#7a7870;font-family:var(--ef-dayname,inherit);}
 .d-num{font-size:var(--fz-daynum,18pt);font-weight:700;color:#ddd9d3;line-height:1;font-family:var(--ef-daynum,inherit);}
 .d-msw{display:flex;align-items:center;gap:2mm;width:100%;margin-bottom:1.5mm;flex-shrink:0;}
-.d-faces{display:flex;justify-content:center;gap:var(--mood-gap,2mm);align-items:center;flex:2;}
+.d-faces{display:flex;justify-content:flex-start;gap:var(--mood-gap,2mm);align-items:center;flex:2;}
 .d-faces svg{width:var(--mood-sz,5mm);height:var(--mood-sz,5mm);stroke:currentColor;stroke-width:var(--icon-stroke,1.5);}
 .d-field{display:flex;align-items:baseline;gap:1mm;flex:1;}
 .d-field-lbl{font-size:var(--fz-fieldlbl,4.5pt);color:#7a7870;text-transform:uppercase;white-space:nowrap;font-family:var(--ef-fieldlbl,inherit);}
 .d-field-line{flex:1;min-width:0;border-bottom:.3pt solid #7a7870;height:2.5mm;}
 .d-hab-list{display:flex;flex-direction:column;gap:var(--hab-row-gap,1.5mm);margin-bottom:1.5mm;flex-shrink:0;}
+.d-weather{display:flex;align-items:center;gap:2mm;width:100%;}
+.d-battery{display:inline-flex;align-items:center;flex-shrink:0;}
+.d-weather-icons{display:flex;justify-content:flex-start;gap:var(--weather-gap,1.5mm);align-items:center;flex:2;}
+.d-weather-icons svg{width:var(--weather-icon-sz,3.5mm);height:var(--weather-icon-sz,3.5mm);stroke:currentColor;stroke-width:var(--icon-stroke,1.5);}
 .d-hab-row{display:flex;align-items:center;gap:var(--icon-gap,1.5mm);}
 .d-box{width:5mm;height:5mm;border:.5pt solid #7a7870;flex-shrink:0;}
 .d-hab-icon{width:var(--icon-sz,3.5mm);height:var(--icon-sz,3.5mm);flex-shrink:0;display:inline-flex;}
@@ -284,6 +288,8 @@ input[type=range]::-moz-range-thumb{width:14px;height:14px;border:none;border-ra
   #page-preview .pg .d-fill:hover,
   #page-preview .pg .d-faces:hover,
   #page-preview .pg .d-field:hover,
+  #page-preview .pg .d-weather:hover,
+  #page-preview .pg .d-battery:hover,
   #page-preview .pg .cover-title:hover,
   #page-preview .pg .wk-hab-name:hover{outline:.5pt dashed rgba(74,66,98,.45);cursor:pointer;}
 }
