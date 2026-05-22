@@ -103,6 +103,12 @@ let opts = {
   elementFonts: {},
 };
 
+const OPT_DEFAULTS = {
+  habRowGap:1.5, checkbox:'square', cbsize:5, iconSize:3.5, iconStroke:1.5, iconGap:1.5,
+  fzHabit:6, fzDayNum:18, fzDow:6, fzWeekHdr:6, fzFieldLbl:4.5, fzMoodSz:5,
+  moonSize:3.5, moodGap:2, moodfaces:5, coverFontSize:12, fillPattern:'dots', dotgrid:5, graphcol:1,
+};
+
 /* ── Constants ── */
 const TN_SIZES = {
   'passport':  { label:'Passport',    w:89,  h:124 },
@@ -151,6 +157,17 @@ function getElemColor(key, fallback){
 }
 function getElemFont(key){
   return (opts.elementFonts && opts.elementFonts[key]) || null;
+}
+function getHabitIconColor(h, colors){
+  if(h.iconColor) return h.iconColor;
+  return getElemColor('habitIcon', iconColor(h.icon, colors.dim));
+}
+function getHabitNameColor(h, colors){
+  if(h.color) return h.color;
+  return getElemColor('habitName', colors.ink);
+}
+function getHabitFont(h){
+  return h.font || getElemFont('habitName') || null;
 }
 function getPageColors(){
   const c=getColors(); const seen=new Set(); const out=[];
@@ -793,33 +810,22 @@ const INSPECTOR_MAP=[
     {type:'elemColor',label:'Color',    elemKey:'sectionHdr',fallback:'dim'},
     {type:'elemFont', label:'Font',     elemKey:'sectionHdr'},
   ]},
-  {cls:'d-hab-icon', label:'Habit Icon',    icon:'circle-dot',    props:[
-    {type:'range',    label:'Size',    key:'iconSize',   leftId:'opt-iconsize',   leftSpan:'iconsize-val',   min:2, max:6, step:0.5, unit:'mm'},
-    {type:'range',    label:'Stroke',  key:'iconStroke', leftId:'opt-iconstroke', leftSpan:'iconstroke-val', min:0.5,max:3,step:0.25,unit:''},
-    {type:'range',    label:'Spacing', key:'iconGap',    leftId:'opt-icongap',    leftSpan:'icongap-val',    min:0, max:4, step:0.5, unit:'mm'},
-    {type:'elemColor',label:'Color',   elemKey:'habitIcon', fallback:'dim'},
-  ]},
   {cls:'wk-hab-name',label:'Week Habit',    icon:'list',          props:[
-    {type:'range',    label:'Font size',key:'fzHabit',   leftId:'opt-fz-habit',   leftSpan:'fzhabit-val',   min:4, max:10,step:0.5, unit:'pt'},
-    {type:'range',    label:'Icon size',key:'iconSize',  leftId:'opt-iconsize',   leftSpan:'iconsize-val',   min:2, max:6, step:0.5, unit:'mm'},
-    {type:'range',    label:'Stroke',   key:'iconStroke',leftId:'opt-iconstroke', leftSpan:'iconstroke-val', min:0.5,max:3,step:0.25,unit:''},
-    {type:'elemColor',label:'Color',   elemKey:'habitIcon', fallback:'dim'},
+    {type:'range',    label:'Name size', key:'fzHabit',   leftId:'opt-fz-habit',   leftSpan:'fzhabit-val',   min:4, max:10,step:0.5, unit:'pt'},
+    {type:'range',    label:'Icon size', key:'iconSize',  leftId:'opt-iconsize',   leftSpan:'iconsize-val',   min:2, max:6, step:0.5, unit:'mm'},
+    {type:'range',    label:'Stroke',    key:'iconStroke',leftId:'opt-iconstroke', leftSpan:'iconstroke-val', min:0.5,max:3,step:0.25,unit:''},
+    {type:'elemFont', label:'Name font', elemKey:'habitName'},
   ]},
-  {cls:'d-hab-name', label:'Habit Name',    icon:'text',          props:[
-    {type:'range',    label:'Font size', key:'fzHabit',  leftId:'opt-fz-habit',   leftSpan:'fzhabit-val',   min:4, max:10,step:0.5, unit:'pt'},
-    {type:'elemColor',label:'Color',    elemKey:'habitName', fallback:'ink'},
-    {type:'elemFont', label:'Font',     elemKey:'habitName'},
-  ]},
-  {cls:'d-hab-row',  label:'Habit Row',     icon:'align-justify', props:[
-    {type:'range',  label:'Row spacing', key:'habRowGap', leftId:'opt-habrowgap', leftSpan:'habrowgap-val', min:0.5,max:4,step:0.5,unit:'mm'},
-    {type:'select', label:'Checkbox',    key:'checkbox',  leftId:'opt-checkbox',
+  {cls:'d-hab-row',  label:'Habit',        icon:'check-square',  props:[
+    {type:'range',  label:'Row gap',   key:'habRowGap', leftId:'opt-habrowgap', leftSpan:'habrowgap-val', min:0.5,max:4, step:0.5, unit:'mm'},
+    {type:'select', label:'Checkbox',  key:'checkbox',  leftId:'opt-checkbox',
       options:[['square','Square'],['circle','Circle'],['rounded','Rounded'],['diamond','Diamond']]},
-    {type:'range',  label:'Box size',    key:'cbsize',    leftId:'opt-cbsize',    min:3,max:7,step:1,unit:'mm'},
-  ]},
-  {cls:'d-box',      label:'Checkbox',      icon:'square',        props:[
-    {type:'select', label:'Style', key:'checkbox', leftId:'opt-checkbox',
-      options:[['square','Square'],['circle','Circle'],['rounded','Rounded'],['diamond','Diamond']]},
-    {type:'range',  label:'Size',  key:'cbsize',   leftId:'opt-cbsize', min:3,max:7,step:1,unit:'mm'},
+    {type:'range',  label:'Box size',  key:'cbsize',    leftId:'opt-cbsize',   min:3,  max:7, step:1,    unit:'mm'},
+    {type:'range',  label:'Icon size', key:'iconSize',  leftId:'opt-iconsize', leftSpan:'iconsize-val',  min:2,  max:6, step:0.5, unit:'mm'},
+    {type:'range',  label:'Stroke',    key:'iconStroke',leftId:'opt-iconstroke',leftSpan:'iconstroke-val',min:0.5,max:3,step:0.25,unit:''},
+    {type:'range',  label:'Item gap',  key:'iconGap',   leftId:'opt-icongap',  leftSpan:'icongap-val',   min:0,  max:4, step:0.5, unit:'mm'},
+    {type:'range',  label:'Name size', key:'fzHabit',   leftId:'opt-fz-habit', leftSpan:'fzhabit-val',   min:4,  max:10,step:0.5, unit:'pt'},
+    {type:'elemFont', label:'Name font', elemKey:'habitName'},
   ]},
   {cls:'d-faces',    label:'Mood Icons',    icon:'smile',         props:[
     {type:'range',    label:'Size',    key:'fzMoodSz',   leftId:'opt-fz-moodsz',  leftSpan:'fzmoodsz-val',   min:3, max:8, step:0.5, unit:'mm'},
@@ -858,10 +864,7 @@ function buildInspector(entry){
 
   const hdr=$('insp-header');
   hdr.innerHTML='';
-  const ico=lucideEl(entry.icon,'14px','14px');
-  hdr.appendChild(ico);
-  hdr.appendChild(document.createTextNode(' '+entry.label));
-  lucide.createIcons({el:hdr});
+  hdr.appendChild(document.createTextNode(entry.label));
 
   const propsEl=$('insp-props');
   propsEl.innerHTML='';
@@ -869,18 +872,47 @@ function buildInspector(entry){
 
   function appendPalette(row, inp){
     const pal=el('div','color-palette');
-    getPageColors().forEach(c=>{
+    const colors=getColors();
+    const mkSw=(c,title)=>{
       const sw=el('button','pal-swatch');
-      sw.type='button';sw.style.background=c;sw.title=c;
+      sw.type='button';sw.style.background=c;sw.title=title||c;
       sw.onclick=e=>{e.stopPropagation();inp.value=c;inp.dispatchEvent(new Event('input'));};
-      pal.appendChild(sw);
-    });
+      return sw;
+    };
+    // Theme colors row
+    const themeRow=el('div','pal-row');
+    COLOR_VARS.forEach(k=>themeRow.appendChild(mkSw(colors[k],COLOR_LABELS[k])));
+    pal.appendChild(themeRow);
+    // Custom / per-habit colors row (deduplicated, no theme duplicates)
+    const themeSet=new Set(Object.values(colors));
+    const customSet=new Set();
+    if(opts.colors) Object.values(opts.colors).filter(Boolean).forEach(c=>customSet.add(c));
+    if(opts.elementColors) Object.values(opts.elementColors).filter(Boolean).forEach(c=>customSet.add(c));
+    habits.forEach(h=>{ if(h.color)customSet.add(h.color); if(h.iconColor)customSet.add(h.iconColor); });
+    themeSet.forEach(c=>customSet.delete(c));
+    if(customSet.size>0){
+      const custRow=el('div','pal-row');
+      customSet.forEach(c=>custRow.appendChild(mkSw(c)));
+      pal.appendChild(custRow);
+    }
     row.appendChild(pal);
+  }
+
+  function mkResetBtn(onReset){
+    const rb=el('button','insp-reset-btn','↺');
+    rb.title='Double-click to reset';
+    rb.ondblclick=e=>{ e.stopPropagation(); onReset(); };
+    return rb;
+  }
+  function mkLabelRow(label, rb){
+    const lr=el('div','insp-label-row');
+    lr.appendChild(el('label','insp-lbl',label));
+    lr.appendChild(rb);
+    return lr;
   }
 
   entry.props.forEach(prop=>{
     const row=el('div','insp-row');
-    row.appendChild(el('label','insp-lbl',prop.label));
 
     if(prop.type==='range'){
       const val=opts[prop.key]??parseFloat(document.getElementById(prop.leftId)?.value)??prop.min;
@@ -897,7 +929,17 @@ function buildInspector(entry){
         if(prop.leftSpan) document.getElementById(prop.leftSpan).textContent=v+prop.unit;
         generate();
       };
+      const rb=mkResetBtn(()=>{
+        const def=OPT_DEFAULTS[prop.key];
+        if(def===undefined) return;
+        opts[prop.key]=def; inp.value=def; span.textContent=def+prop.unit;
+        const li=document.getElementById(prop.leftId);
+        if(li) li.value=def;
+        if(prop.leftSpan) document.getElementById(prop.leftSpan).textContent=def+prop.unit;
+        generate();
+      });
       wrap.appendChild(inp);wrap.appendChild(span);
+      row.appendChild(mkLabelRow(prop.label,rb));
       row.appendChild(wrap);
 
     }else if(prop.type==='select'){
@@ -917,6 +959,15 @@ function buildInspector(entry){
         if(li) li.value=raw;
         generate();
       };
+      const rb=mkResetBtn(()=>{
+        const def=OPT_DEFAULTS[prop.key];
+        if(def===undefined) return;
+        opts[prop.key]=def; sel.value=String(def);
+        const li=document.getElementById(prop.leftId);
+        if(li) li.value=String(def);
+        generate();
+      });
+      row.appendChild(mkLabelRow(prop.label,rb));
       row.appendChild(sel);
 
     }else if(prop.type==='color'){
@@ -929,6 +980,13 @@ function buildInspector(entry){
         if(li) li.value=inp.value;
         generate();
       };
+      const rb=mkResetBtn(()=>{
+        delete opts.colors[prop.colorKey];
+        buildColorOverrides();
+        inp.value=getColors()[prop.colorKey];
+        generate();
+      });
+      row.appendChild(mkLabelRow(prop.label,rb));
       row.appendChild(inp);
       appendPalette(row,inp);
 
@@ -939,6 +997,12 @@ function buildInspector(entry){
       const inp=document.createElement('input');
       inp.type='color';inp.value=val;
       inp.oninput=()=>{ opts.elementColors[prop.elemKey]=inp.value; generate(); };
+      const rb=mkResetBtn(()=>{
+        delete opts.elementColors[prop.elemKey];
+        inp.value=getColors()[prop.fallback]||themeColor;
+        generate();
+      });
+      row.appendChild(mkLabelRow(prop.label,rb));
       row.appendChild(inp);
       appendPalette(row,inp);
 
@@ -955,6 +1019,12 @@ function buildInspector(entry){
         sel.appendChild(o);
       });
       sel.onchange=()=>{ opts.elementFonts[prop.elemKey]=sel.value; generate(); };
+      const rb=mkResetBtn(()=>{
+        delete opts.elementFonts[prop.elemKey];
+        sel.value='';
+        generate();
+      });
+      row.appendChild(mkLabelRow(prop.label,rb));
       row.appendChild(sel);
     }
 
@@ -993,6 +1063,52 @@ function buildInspector(entry){
       });
       lucide.createIcons({el:iconGrid});
       propsEl.appendChild(iconGrid);
+
+      // Per-habit color / font
+      const hSep=el('hr','insp-sep');
+      propsEl.appendChild(hSep);
+      const hSectionLbl=el('div','insp-habit-section-lbl','This habit');
+      propsEl.appendChild(hSectionLbl);
+
+      function mkHabitColorRow(label, getter, setter, resetFallback){
+        const r=el('div','insp-row');
+        const rb=mkResetBtn(()=>{ setter(null); ci.value=resetFallback; renderHabits(); generate(); });
+        r.appendChild(mkLabelRow(label,rb));
+        const ci=document.createElement('input');
+        ci.type='color'; ci.value=getter()||resetFallback;
+        ci.oninput=()=>{ setter(ci.value); renderHabits(); generate(); };
+        r.appendChild(ci);
+        appendPalette(r,ci);
+        return r;
+      }
+
+      propsEl.appendChild(mkHabitColorRow(
+        'Icon color',
+        ()=>h.iconColor||null,
+        v=>{ if(v)h.iconColor=v; else delete h.iconColor; },
+        getHabitIconColor(h,colors)
+      ));
+      propsEl.appendChild(mkHabitColorRow(
+        'Name color',
+        ()=>h.color||null,
+        v=>{ if(v)h.color=v; else delete h.color; },
+        getHabitNameColor(h,colors)
+      ));
+
+      const fontRow=el('div','insp-row');
+      const fontSel=document.createElement('select');
+      fontSel.className='insp-font-sel';
+      ['','Georgia','Times New Roman','Palatino','Garamond','Arial','Helvetica','Verdana','Trebuchet MS','Courier New'].forEach(f=>{
+        const o=document.createElement('option');
+        o.value=f; o.textContent=f||`Theme (${activeFont()})`;
+        if(f===(h.font||'')) o.selected=true;
+        fontSel.appendChild(o);
+      });
+      fontSel.onchange=()=>{ if(fontSel.value) h.font=fontSel.value; else delete h.font; renderHabits(); generate(); };
+      const fontRb=mkResetBtn(()=>{ delete h.font; fontSel.value=''; renderHabits(); generate(); });
+      fontRow.appendChild(mkLabelRow('Name font',fontRb));
+      fontRow.appendChild(fontSel);
+      propsEl.appendChild(fontRow);
     }
   }
 
@@ -2020,10 +2136,13 @@ function mkWeekSummary(y,m,wn,wdays,c){
     const nameCell=el('span','wk-hab-name');
     if(h.id) nameCell.dataset.habitId=h.id;
     const ico=lucideEl(h.icon,(opts.iconSize??3.5)+'mm',(opts.iconSize??3.5)+'mm');
-    ico.style.color=getElemColor('habitIcon',iconColor(h.icon,colors.dim));
+    ico.style.color=getHabitIconColor(h,colors);
     nameCell.appendChild(ico);
-    nameCell.appendChild(el('span','',h.name));
-    nameCell.style.color=getElemColor('habitName',colors.dim);
+    const textSpan=el('span','',h.name);
+    textSpan.style.color=getHabitNameColor(h,colors);
+    const hf=getHabitFont(h);
+    if(hf) textSpan.style.fontFamily=`'${hf}',serif`;
+    nameCell.appendChild(textSpan);
     sec.appendChild(nameCell);
     wdays.forEach((d,i)=>{
       const cell=el('div','wk-hab-cell');
@@ -2137,11 +2256,13 @@ function mkDay(y,m,d,c){
     box.style.cssText=`border:.5pt solid ${colors.dim};${getCheckboxStyle()}`;
     row.appendChild(box);
     const ico=el('span','d-hab-icon');
-    ico.style.color=getElemColor('habitIcon',iconColor(h.icon,colors.dim));
+    ico.style.color=getHabitIconColor(h,colors);
     ico.appendChild(lucideEl(h.icon,(opts.iconSize??3.5)+'mm',(opts.iconSize??3.5)+'mm'));
     row.appendChild(ico);
     const name=el('span','d-hab-name',h.name);
-    name.style.color=getElemColor('habitName',colors.ink);
+    name.style.color=getHabitNameColor(h,colors);
+    const hf=getHabitFont(h);
+    if(hf) name.style.fontFamily=`'${hf}',serif`;
     row.appendChild(name);
     habList.appendChild(row);
   });
