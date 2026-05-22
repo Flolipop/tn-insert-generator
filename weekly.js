@@ -99,6 +99,11 @@ let opts = {
   expenseTracker: false,
   reflectionPage: false,
   moonPhase: false,
+  weatherIcons: false,
+  weatherIconSize: 3.5,
+  energyBattery: false,
+  batterySegs: 5,
+  batteryStroke: 0.4,
   iconSize: 5,
   iconGap: 1.5,
   iconStroke: 1.5,
@@ -119,6 +124,7 @@ const OPT_DEFAULTS = {
   habRowGap:1.5, checkbox:'square', cbsize:5, iconSize:5, iconStroke:1.5, iconGap:1.5,
   fzHabit:6, fzDayNum:18, fzDow:6, fzWeekHdr:6, fzFieldLbl:4.5, fzMoodSz:5,
   moonSize:3.5, moodGap:2, moodfaces:5, coverFontSize:12, fillPattern:'dots', dotgrid:5, graphcol:1,
+  weatherIconSize:3.5, batterySegs:5,
 };
 
 /* ── Constants ── */
@@ -421,6 +427,9 @@ function applyOptsToUI(){
   $('opt-linkfg').checked=opts.linkFieldsGraphs;
   $('metric-section').style.display=opts.linkFieldsGraphs?'none':'';
   $('opt-moonphase').checked=opts.moonPhase;
+  $('opt-weathericons').checked=opts.weatherIcons;
+  $('opt-energybattery').checked=opts.energyBattery;
+  if($('opt-batterysegs')) $('opt-batterysegs').value=opts.batterySegs??5;
   if(opts.flip==='short') $('flip-short').checked=true;
   else $('flip-long').checked=true;
   const rangeFields=[
@@ -436,6 +445,7 @@ function applyOptsToUI(){
     ['opt-habrowgap','habrowgap-val',opts.habRowGap??1.5,'mm'],
     ['opt-moodgap','moodgap-val',opts.moodGap??2,'mm'],
     ['opt-moonsize','moonsize-val',opts.moonSize??3.5,'mm'],
+    ['opt-weathericonsize','weathericonsize-val',opts.weatherIconSize??3.5,'mm'],
   ];
   rangeFields.forEach(([inpId,spanId,val,unit])=>{
     const inp=$(inpId); if(inp){inp.value=val; $(spanId).textContent=val+unit;}
@@ -487,6 +497,11 @@ function readOptsFromUI(){
   opts.linkFieldsGraphs=$('opt-linkfg').checked;
   opts.flip=document.querySelector('input[name="flip"]:checked')?.value||'long';
   opts.moonPhase=$('opt-moonphase').checked;
+  opts.weatherIcons=$('opt-weathericons').checked;
+  opts.weatherIconSize=parseFloat($('opt-weathericonsize').value)||3.5;
+  opts.energyBattery=$('opt-energybattery').checked;
+  opts.batterySegs=parseInt($('opt-batterysegs').value)||5;
+  opts.batteryStroke=parseFloat($('opt-batterystroke')?.value)||0.4;
   opts.iconSize=parseFloat($('opt-iconsize').value)||5;
   opts.iconGap=parseFloat($('opt-icongap').value)||1.5;
   opts.iconStroke=parseFloat($('opt-iconstroke').value)||1.5;
@@ -851,6 +866,15 @@ const INSPECTOR_MAP=[
     {type:'range',    label:'Font size', key:'fzFieldLbl', leftId:'opt-fz-fieldlbl', leftSpan:'fzfieldlbl-val', min:3,max:8,step:0.5,unit:'pt'},
     {type:'elemColor',label:'Color',    elemKey:'fieldLabel',fallback:'dim'},
     {type:'elemFont', label:'Font',     elemKey:'fieldLabel'},
+  ]},
+  {cls:'d-weather',  label:'Weather Icons',  icon:'cloud',         props:[
+    {type:'range',    label:'Size',     key:'weatherIconSize', leftId:'opt-weathericonsize', leftSpan:'weathericonsize-val', min:3,max:8,step:0.5,unit:'mm'},
+    {type:'elemColor',label:'Color',   elemKey:'weatherIcons', fallback:'dim'},
+  ]},
+  {cls:'d-battery',  label:'Energy Battery', icon:'battery',       props:[
+    {type:'range',    label:'Segments', key:'batterySegs',    min:3, max:12, step:1,   unit:''},
+    {type:'range',    label:'Stroke',   key:'batteryStroke',  min:0.2, max:1.5, step:0.1, unit:'pt'},
+    {type:'elemColor',label:'Color',   elemKey:'batteryColor', fallback:'dim'},
   ]},
   {cls:'d-fill',     label:'Background',    icon:'grid-2x2',      props:[
     {type:'select', label:'Pattern', key:'fillPattern', leftId:'opt-fillpattern',
@@ -2183,6 +2207,24 @@ function getMoonPhase(year,month,day){
   return((diff%synodic)+synodic)%synodic/synodic;
 }
 
+function mkBatterySVG(segs, color, strokeW, stretch=false){
+  const sw=strokeW??0.4, segH=2.5, w=5, termW=3.5, termH=1.5;
+  const bodyH=segs*segH;
+  const totalH=bodyH+termH;
+  const hAttr=stretch?'100%':`${totalH}mm`;
+  const pAR=stretch?'none':'xMidYMid meet';
+  let dividers='';
+  for(let i=1;i<segs;i++){
+    const y=(termH+i*segH).toFixed(2);
+    dividers+=`<line x1="${sw}" y1="${y}" x2="${w-sw}" y2="${y}" stroke="${color}" stroke-width="${(sw*0.5).toFixed(2)}"/>`;
+  }
+  return `<svg viewBox="0 0 ${w} ${totalH}" width="${w}mm" height="${hAttr}" preserveAspectRatio="${pAR}" style="flex-shrink:0;display:block;${stretch?'height:100%;':''}">
+    <rect x="${((w-termW)/2).toFixed(2)}" y="${(sw/2).toFixed(2)}" width="${termW}" height="${(termH-sw/2).toFixed(2)}" fill="${color}" rx="0.2"/>
+    <rect x="${(sw/2).toFixed(2)}" y="${termH}" width="${(w-sw).toFixed(2)}" height="${(bodyH-sw).toFixed(2)}" fill="none" stroke="${color}" stroke-width="${sw}" rx="0.3"/>
+    ${dividers}
+  </svg>`;
+}
+
 function moonPhaseSVG(phase,sz,ink){
   const r=10,d=r*2;
   const circle=`<circle cx="${r}" cy="${r}" r="${r-1}" fill="none" stroke="${ink}" stroke-width="1"/>`;
@@ -2228,19 +2270,7 @@ function mkDay(y,m,d,c){
   hdr.appendChild(numEl);
   p.appendChild(hdr);
 
-  const msw=el('div','d-msw');
-  if(opts.mood){
-    const faces=el('div','d-faces');
-    faces.style.color=getElemColor('moodIcons',colors.dim);
-    const moodIcons=opts.moodfaces===3?MOOD_ICONS3:MOOD_ICONS5;
-    moodIcons.forEach(name=>{
-      const icon=lucideEl(name,(opts.fzMoodSz??5)+'mm',(opts.fzMoodSz??5)+'mm');
-      faces.appendChild(icon);
-    });
-    msw.appendChild(faces);
-  }
-
-  dailyFields.forEach(f=>{
+  function mkDailyField(f){
     const field=el('div','d-field');
     const lbl=el('span','d-field-lbl',f.label);
     lbl.style.color=getElemColor('fieldLabel',colors.dim);
@@ -2249,10 +2279,98 @@ function mkDay(y,m,d,c){
     const line=el('div','d-field-line');
     line.style.borderBottom=`.3pt solid ${colors.dim}`;
     field.appendChild(line);
-    msw.appendChild(field);
-  });
+    return field;
+  }
 
-  if(opts.mood||dailyFields.length>0){
+  const msw=el('div','d-msw');
+  const WEATHER_ICON_LIST=['sun','cloud','cloud-rain','cloud-snow','cloud-lightning'];
+
+  const mkBatteryEl=(stretch=false)=>{
+    const wrap=el('div','d-battery');
+    if(stretch) wrap.style.cssText='display:flex;align-items:stretch;align-self:stretch;';
+    wrap.innerHTML=mkBatterySVG(opts.batterySegs??5, getElemColor('batteryColor',colors.dim), opts.batteryStroke??0.4, stretch);
+    return wrap;
+  };
+
+  if(opts.weatherIcons){
+    const wColor=getElemColor('weatherIcons',colors.dim);
+    const mkWIcons=()=>{
+      const wIcons=el('div','d-weather-icons');
+      wIcons.style.color=wColor;
+      WEATHER_ICON_LIST.forEach(name=>wIcons.appendChild(lucideEl(name,(opts.weatherIconSize??5)+'mm',(opts.weatherIconSize??5)+'mm')));
+      return wIcons;
+    };
+
+    if(opts.mood){
+      if(opts.energyBattery){
+        // Grid: col1=icons auto, col2=battery auto (spans 2 rows), col3=fields 1fr
+        msw.style.cssText='display:grid;grid-template-columns:auto auto 1fr;gap:1.5mm 2mm;align-items:center;';
+        const faces=el('div','d-faces');
+        faces.style.cssText='grid-area:1/1/2/2;color:'+getElemColor('moodIcons',colors.dim)+';';
+        const moodIcons=opts.moodfaces===3?MOOD_ICONS3:MOOD_ICONS5;
+        moodIcons.forEach(name=>faces.appendChild(lucideEl(name,(opts.fzMoodSz??3.5)+'mm',(opts.fzMoodSz??5)+'mm')));
+        const batt=mkBatteryEl(true);
+        batt.style.gridArea='1/2/3/3';
+        const wRow=el('div','d-weather');
+        wRow.style.gridArea='2/1/3/2';
+        wRow.appendChild(mkWIcons());
+        const half=Math.ceil(dailyFields.length/2);
+        const f1=el('div');
+        f1.style.cssText='display:flex;align-items:center;gap:2mm;grid-area:1/3/2/4;';
+        dailyFields.slice(0,half).forEach(f=>f1.appendChild(mkDailyField(f)));
+        const f2=el('div');
+        f2.style.cssText='display:flex;align-items:center;gap:2mm;grid-area:2/3/3/4;';
+        dailyFields.slice(half).forEach(f=>f2.appendChild(mkDailyField(f)));
+        msw.appendChild(faces);
+        msw.appendChild(batt);
+        msw.appendChild(wRow);
+        msw.appendChild(f1);
+        msw.appendChild(f2);
+      } else {
+        msw.style.flexDirection='column';
+        msw.style.gap='1.5mm';
+        const row1=el('div');
+        row1.style.cssText='display:flex;align-items:center;gap:2mm;width:100%;';
+        const row2=el('div','d-weather');
+        row2.style.cssText='display:flex;align-items:center;gap:2mm;width:100%;';
+        const faces=el('div','d-faces');
+        faces.style.color=getElemColor('moodIcons',colors.dim);
+        const moodIcons=opts.moodfaces===3?MOOD_ICONS3:MOOD_ICONS5;
+        moodIcons.forEach(name=>faces.appendChild(lucideEl(name,(opts.fzMoodSz??5)+'mm',(opts.fzMoodSz??5)+'mm')));
+        row1.appendChild(faces);
+        row2.appendChild(mkWIcons());
+        const half=Math.ceil(dailyFields.length/2);
+        dailyFields.slice(0,half).forEach(f=>row1.appendChild(mkDailyField(f)));
+        dailyFields.slice(half).forEach(f=>row2.appendChild(mkDailyField(f)));
+        msw.appendChild(row1);
+        msw.appendChild(row2);
+      }
+    } else {
+      const row=el('div','d-weather');
+      row.style.cssText='display:flex;align-items:center;gap:2mm;width:100%;';
+      const wIcons=mkWIcons();
+      if(opts.energyBattery) wIcons.appendChild(mkBatteryEl());
+      row.appendChild(wIcons);
+      dailyFields.forEach(f=>row.appendChild(mkDailyField(f)));
+      msw.appendChild(row);
+    }
+  } else {
+    if(opts.mood){
+      const faces=el('div','d-faces');
+      faces.style.color=getElemColor('moodIcons',colors.dim);
+      const moodIcons=opts.moodfaces===3?MOOD_ICONS3:MOOD_ICONS5;
+      moodIcons.forEach(name=>faces.appendChild(lucideEl(name,(opts.fzMoodSz??5)+'mm',(opts.fzMoodSz??5)+'mm')));
+      if(opts.energyBattery) faces.appendChild(mkBatteryEl());
+      msw.appendChild(faces);
+    } else if(opts.energyBattery){
+      const battWrap=el('div','d-faces');
+      battWrap.appendChild(mkBatteryEl());
+      msw.appendChild(battWrap);
+    }
+    dailyFields.forEach(f=>msw.appendChild(mkDailyField(f)));
+  }
+
+  if(opts.mood||dailyFields.length>0||opts.weatherIcons||opts.energyBattery){
     p.appendChild(msw);
     const sep1=el('hr','d-sep');
     sep1.style.cssText=getSeparatorStyle(colors);
@@ -2351,6 +2469,8 @@ function generate(){
   root.style.setProperty('--mood-sz',    (opts.fzMoodSz??5)+'mm');
   root.style.setProperty('--hab-row-gap',(opts.habRowGap??1.5)+'mm');
   root.style.setProperty('--mood-gap',   (opts.moodGap??2)+'mm');
+  root.style.setProperty('--weather-icon-sz',(opts.weatherIconSize??3.5)+'mm');
+  root.style.setProperty('--weather-gap',(opts.moodGap??2)+'mm');
   const ef=key=>`'${getElemFont(key)||activeFont()}',serif`;
   root.style.setProperty('--ef-daynum',  ef('dayNum'));
   root.style.setProperty('--ef-dayname', ef('dayName'));

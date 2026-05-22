@@ -113,6 +113,31 @@
             </div>
           </div>
           <div class="toggle-row" style="margin-top:6px;">
+            <label class="toggle-sw"><input type="checkbox" id="opt-weathericons" onchange="onOptionChange()"><span class="slider"></span></label>
+            <span style="font-size:12px;">Weather icons</span>
+          </div>
+          <div class="cfg-row" style="margin-top:4px;">
+            <label>Weather size</label>
+            <div class="range-row" style="flex:1;">
+              <input type="range" id="opt-weathericonsize" min="3" max="8" step="0.5" value="3.5" oninput="onRangeChange('opt-weathericonsize','weathericonsize-val','mm')">
+              <span class="range-val" id="weathericonsize-val">3.5mm</span>
+            </div>
+          </div>
+          <div class="toggle-row" style="margin-top:6px;">
+            <label class="toggle-sw"><input type="checkbox" id="opt-energybattery" onchange="onOptionChange()"><span class="slider"></span></label>
+            <span style="font-size:12px;">Energy battery</span>
+          </div>
+          <div class="cfg-row" style="margin-top:4px;">
+            <label>Segments</label>
+            <select id="opt-batterysegs" onchange="onOptionChange()">
+              <option value="4">4</option>
+              <option value="5" selected>5</option>
+              <option value="6">6</option>
+              <option value="8">8</option>
+              <option value="10">10</option>
+            </select>
+          </div>
+          <div class="toggle-row" style="margin-top:6px;">
             <label class="toggle-sw"><input type="checkbox" id="opt-moonphase" onchange="onOptionChange()"><span class="slider"></span></label>
             <span style="font-size:12px;">Moon phase</span>
           </div>
