@@ -226,7 +226,6 @@ input::placeholder{color:rgba(255,255,255,.4);}
   .fold-line{border-left:.3mm solid #666;}
   .spread-container{outline:none;}
   *{-webkit-print-color-adjust:exact;print-color-adjust:exact;}
-  @page{size:A4 landscape;margin:0;}
 }
 
 /* ── PRINT GUIDE ────────────── */
