@@ -49,6 +49,9 @@ let graphMetrics = [{id:1,title:'Weight',min:null,max:null,step:null},{id:2,titl
 /* ── Daily fields ── */
 let dailyFields = [{id:1,label:'Steps'},{id:2,label:'Wt'}];
 
+/* ── Custom holidays / events (repeat yearly) ── */
+let customHolidays = [];
+
 /* ── Options defaults ── */
 let opts = {
   tnsize: 'passport',
@@ -117,6 +120,9 @@ let opts = {
   moodGap: 2,
   moonSize: 3.5,
   savePaper: false,
+  holidays: false,
+  holidayCountry: 'US',
+  holidayState: '',
   elementColors: {},
   elementFonts: {},
 };
@@ -211,6 +217,171 @@ function firstDow(y,m){return new Date(y,m,1).getDay();}
 function dow(y,m,d){return new Date(y,m,d).getDay();}
 
 function getWdayLabels(){ return opts.weekstart==='sunday' ? WDAY_LBL_SUN : WDAY_LBL_MON; }
+
+/* ══ Holidays ══ */
+// n-th (1-based) weekday wd (0=Sun..6=Sat) of month m
+function nthWeekday(y,m,wd,n){
+  const first=new Date(y,m,1).getDay();
+  return 1+((wd-first+7)%7)+(n-1)*7;
+}
+// last weekday wd of month m
+function lastWeekday(y,m,wd){
+  const last=new Date(y,m+1,0);
+  return last.getDate()-((last.getDay()-wd+7)%7);
+}
+// last weekday wd strictly before day `before` in month m
+function weekdayBefore(y,m,wd,before){
+  for(let d=before-1;d>=before-7;d--) if(new Date(y,m,d).getDay()===wd) return d;
+  return before;
+}
+// Easter Sunday (Anonymous Gregorian algorithm) → {m,d} month 0-indexed
+function easterSunday(y){
+  const a=y%19,b=Math.floor(y/100),c=y%100,d=Math.floor(b/4),e=b%4,
+    f=Math.floor((b+8)/25),g=Math.floor((b-f+1)/3),h=(19*a+b-d-g+15)%30,
+    i=Math.floor(c/4),k=c%4,l=(32+2*e+2*i-h-k)%7,mm=Math.floor((a+11*h+22*l)/451),
+    month=Math.floor((h+l-7*mm+114)/31),day=((h+l-7*mm+114)%31)+1;
+  return {m:month-1,d:day};
+}
+function offsetDate(p,y,n){ const dt=new Date(y,p.m,p.d+n); return {m:dt.getMonth(),d:dt.getDate()}; }
+
+const HOLIDAY_SETS = {
+  US:y=>[
+    {m:0,d:1,name:"New Year's Day"},
+    {m:0,d:nthWeekday(y,0,1,3),name:"Martin Luther King Jr. Day"},
+    {m:1,d:nthWeekday(y,1,1,3),name:"Presidents' Day"},
+    {m:4,d:lastWeekday(y,4,1),name:"Memorial Day"},
+    {m:5,d:19,name:"Juneteenth"},
+    {m:6,d:4,name:"Independence Day"},
+    {m:8,d:nthWeekday(y,8,1,1),name:"Labor Day"},
+    {m:9,d:nthWeekday(y,9,1,2),name:"Columbus Day"},
+    {m:10,d:11,name:"Veterans Day"},
+    {m:10,d:nthWeekday(y,10,4,4),name:"Thanksgiving"},
+    {m:11,d:25,name:"Christmas Day"},
+  ],
+  GB:y=>{ const e=easterSunday(y),gf=offsetDate(e,y,-2),em=offsetDate(e,y,1); return [
+    {m:0,d:1,name:"New Year's Day"},
+    {m:gf.m,d:gf.d,name:"Good Friday"},
+    {m:em.m,d:em.d,name:"Easter Monday"},
+    {m:4,d:nthWeekday(y,4,1,1),name:"Early May Bank Holiday"},
+    {m:4,d:lastWeekday(y,4,1),name:"Spring Bank Holiday"},
+    {m:7,d:lastWeekday(y,7,1),name:"Summer Bank Holiday"},
+    {m:11,d:25,name:"Christmas Day"},
+    {m:11,d:26,name:"Boxing Day"},
+  ];},
+  CA:y=>{ const e=easterSunday(y),gf=offsetDate(e,y,-2); return [
+    {m:0,d:1,name:"New Year's Day"},
+    {m:1,d:nthWeekday(y,1,1,3),name:"Family Day"},
+    {m:gf.m,d:gf.d,name:"Good Friday"},
+    {m:4,d:weekdayBefore(y,4,1,25),name:"Victoria Day"},
+    {m:6,d:1,name:"Canada Day"},
+    {m:8,d:nthWeekday(y,8,1,1),name:"Labour Day"},
+    {m:9,d:nthWeekday(y,9,1,2),name:"Thanksgiving"},
+    {m:10,d:11,name:"Remembrance Day"},
+    {m:11,d:25,name:"Christmas Day"},
+    {m:11,d:26,name:"Boxing Day"},
+  ];},
+  AU:y=>{ const e=easterSunday(y),gf=offsetDate(e,y,-2),em=offsetDate(e,y,1); return [
+    {m:0,d:1,name:"New Year's Day"},
+    {m:0,d:26,name:"Australia Day"},
+    {m:gf.m,d:gf.d,name:"Good Friday"},
+    {m:em.m,d:em.d,name:"Easter Monday"},
+    {m:3,d:25,name:"Anzac Day"},
+    {m:11,d:25,name:"Christmas Day"},
+    {m:11,d:26,name:"Boxing Day"},
+  ];},
+};
+
+// ── Worldwide holiday library (date-holidays), lazy-loaded from CDN ──
+let holidayLibPromise=null;
+function ensureHolidayLib(){
+  if(typeof window.Holidays==='function') return Promise.resolve(true);
+  if(holidayLibPromise) return holidayLibPromise;
+  holidayLibPromise=new Promise(res=>{
+    const s=document.createElement('script');
+    s.src='https://unpkg.com/date-holidays/dist/umd.min.js';
+    s.async=true;
+    s.onload=()=>{
+      // UMD build may export { default: ctor }; normalize to a constructor on window.Holidays
+      if(window.Holidays && typeof window.Holidays!=='function' && typeof window.Holidays.default==='function'){
+        window.Holidays=window.Holidays.default;
+      }
+      res(typeof window.Holidays==='function');
+    };
+    s.onerror=()=>res(false);
+    document.head.appendChild(s);
+  });
+  return holidayLibPromise;
+}
+function fallbackBuiltin(y,m,add){
+  const set=HOLIDAY_SETS[opts.holidayCountry]||HOLIDAY_SETS.US;
+  set(y).forEach(h=>{ if(h.m===m) add(h.d,h.name); });
+}
+
+// day(1..31) → [names] for month m of year y
+function holidayMap(y,m){
+  const map={};
+  const add=(d,name)=>{ if(name && !(map[d]&&map[d].includes(name))) (map[d]=map[d]||[]).push(name); };
+  if(opts.holidays){
+    if(typeof window.Holidays==='function'){
+      try{
+        const hd=new Holidays(opts.holidayCountry||'US', opts.holidayState||undefined);
+        (hd.getHolidays(y)||[]).forEach(h=>{
+          if(h.type!=='public'&&h.type!=='bank') return;
+          const dt=h.start||new Date(String(h.date).replace(' ','T'));
+          if(dt.getFullYear()===y && dt.getMonth()===m) add(dt.getDate(), h.name);
+        });
+      }catch(e){ fallbackBuiltin(y,m,add); }
+    } else {
+      fallbackBuiltin(y,m,add);
+    }
+  }
+  customHolidays.forEach(h=>{ if(h.month===m) add(h.day,h.name); });
+  return map;
+}
+
+function populateHolidayCountries(){
+  const sel=$('opt-holidaycountry');
+  if(!sel||!window.Holidays||sel.dataset.full) return;
+  const countries=new Holidays().getCountries()||{};
+  const cur=opts.holidayCountry||'US';
+  sel.innerHTML='';
+  Object.keys(countries).sort((a,b)=>countries[a].localeCompare(countries[b])).forEach(code=>{
+    const o=document.createElement('option'); o.value=code; o.textContent=countries[code]; sel.appendChild(o);
+  });
+  sel.value=countries[cur]?cur:'US';
+  opts.holidayCountry=sel.value;
+  sel.dataset.full='1';
+  const st=$('holiday-lib-status'); if(st) st.textContent=Object.keys(countries).length+' countries available.';
+  populateHolidayStates();
+}
+function populateHolidayStates(){
+  const ssel=$('opt-holidaystate');
+  if(!ssel) return;
+  if(!window.Holidays){ ssel.style.display='none'; return; }
+  const states=new Holidays().getStates($('opt-holidaycountry').value)||{};
+  const keys=Object.keys(states);
+  if(!keys.length){ ssel.style.display='none'; ssel.innerHTML='<option value="">— Whole country —</option>'; opts.holidayState=''; return; }
+  ssel.style.display='';
+  ssel.innerHTML='<option value="">— Whole country —</option>';
+  keys.sort((a,b)=>states[a].localeCompare(states[b])).forEach(k=>{
+    const o=document.createElement('option'); o.value=k; o.textContent=states[k]; ssel.appendChild(o);
+  });
+  ssel.value=states[opts.holidayState]?opts.holidayState:'';
+  opts.holidayState=ssel.value;
+}
+function onHolidayChange(){
+  readOptsFromUI();
+  if(opts.holidays){
+    ensureHolidayLib().then(ok=>{ if(ok){ populateHolidayCountries(); } generate(); });
+  }
+  generate();
+}
+function onHolidayCountryChange(){
+  readOptsFromUI();
+  populateHolidayStates();
+  readOptsFromUI();
+  generate();
+}
 
 /* ── Resolve active colors ── */
 function getColors(){
@@ -353,6 +524,33 @@ function addDailyField(){
   renderDailyFields(); onOptionChange();
 }
 
+const MONTH_ABB=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function renderHolidays(){
+  const list=$('holiday-list');
+  if(!list) return;
+  list.innerHTML='';
+  customHolidays.slice().sort((a,b)=>a.month-b.month||a.day-b.day).forEach(h=>{
+    const row=el('div','daily-field-item');
+    const lbl=el('span',null,`${MONTH_ABB[h.month]} ${h.day} — ${h.name}`);
+    lbl.style.cssText='flex:1;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;';
+    row.appendChild(lbl);
+    const del=el('button','btn btn-d','x');
+    del.onclick=()=>{ customHolidays=customHolidays.filter(x=>x.id!==h.id); renderHolidays(); generate(); };
+    row.appendChild(del);
+    list.appendChild(row);
+  });
+}
+function addHoliday(){
+  const name=$('holiday-name').value.trim();
+  if(!name) return;
+  const month=parseInt($('holiday-month').value);
+  let day=parseInt($('holiday-day').value)||1;
+  day=Math.min(31,Math.max(1,day));
+  customHolidays.push({id:Date.now(),name,month,day});
+  $('holiday-name').value='';
+  renderHolidays(); generate();
+}
+
 /* ══════════════════════════════════════════════
    PERSISTENCE
    ══════════════════════════════════════════════ */
@@ -361,7 +559,7 @@ function saveState(){
     localStorage.setItem(STORAGE_KEY,JSON.stringify({
       habits, bottomBoxes, selectedIcon, selectedDays,
       month:parseInt($('sel-m').value), year:parseInt($('sel-y').value),
-      opts, graphMetrics, dailyFields
+      opts, graphMetrics, dailyFields, customHolidays
     }));
   }catch(e){}
 }
@@ -379,6 +577,7 @@ function loadState(){
     if(s.opts) opts={...opts,...s.opts};
     if(s.graphMetrics) graphMetrics=s.graphMetrics;
     if(s.dailyFields) dailyFields=s.dailyFields;
+    if(s.customHolidays) customHolidays=s.customHolidays;
     return true;
   }catch(e){return false;}
 }
@@ -428,6 +627,9 @@ function applyOptsToUI(){
   $('opt-linkfg').checked=opts.linkFieldsGraphs;
   $('metric-section').style.display=opts.linkFieldsGraphs?'none':'';
   $('opt-savepaper').checked=opts.savePaper;
+  if($('opt-holidays')) $('opt-holidays').checked=opts.holidays;
+  if($('opt-holidaycountry')) $('opt-holidaycountry').value=opts.holidayCountry||'US';
+  if($('opt-holidaystate')){ const ss=$('opt-holidaystate'); if([...ss.options].some(o=>o.value===opts.holidayState)) ss.value=opts.holidayState||''; }
   $('opt-moonphase').checked=opts.moonPhase;
   $('opt-weathericons').checked=opts.weatherIcons;
   $('opt-energybattery').checked=opts.energyBattery;
@@ -499,6 +701,9 @@ function readOptsFromUI(){
   opts.linkFieldsGraphs=$('opt-linkfg').checked;
   opts.flip=document.querySelector('input[name="flip"]:checked')?.value||'long';
   opts.savePaper=$('opt-savepaper').checked;
+  opts.holidays=$('opt-holidays')?.checked||false;
+  opts.holidayCountry=$('opt-holidaycountry')?.value||'US';
+  opts.holidayState=$('opt-holidaystate')?.value||'';
   opts.moonPhase=$('opt-moonphase').checked;
   opts.weatherIcons=$('opt-weathericons').checked;
   opts.weatherIconSize=parseFloat($('opt-weathericonsize').value)||3.5;
@@ -537,7 +742,7 @@ function toggleLink(){
 /* ── Import / Export / Reset ── */
 function exportSettings(){
   readOptsFromUI();
-  const data={habits,bottomBoxes,selectedIcon,selectedDays,opts,graphMetrics,dailyFields,
+  const data={habits,bottomBoxes,selectedIcon,selectedDays,opts,graphMetrics,dailyFields,customHolidays,
     month:parseInt($('sel-m').value),year:parseInt($('sel-y').value)};
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const a=document.createElement('a');
@@ -561,6 +766,7 @@ function importSettings(e){
       if(data.opts) opts={...opts,...data.opts};
       if(data.graphMetrics) graphMetrics=data.graphMetrics;
       if(data.dailyFields) dailyFields=data.dailyFields;
+      if(data.customHolidays) customHolidays=data.customHolidays;
       if(data.month!=null) $('sel-m').value=data.month;
       if(data.year!=null) $('sel-y').value=data.year;
       applyOptsToUI();
@@ -568,6 +774,7 @@ function importSettings(e){
       buildColorOverrides();
       renderMetrics();
       renderDailyFields();
+      renderHolidays();
       renderHabits();
       renderBottomBoxes();
       buildDayPick();
@@ -1990,6 +2197,8 @@ function mkPrintGuide(pageCount,sheetCount){
 }
 
 function mkCalendarGrid(page,colors,wdayLabels,weeks){
+  const y=parseInt($('sel-y').value),m=parseInt($('sel-m').value);
+  const hmap=holidayMap(y,m);
   const grid=el('div','cal-grid');
   grid.style.gridTemplateRows=`auto repeat(${weeks.length},1fr)`;
   wdayLabels.forEach(lbl=>{
@@ -2000,13 +2209,20 @@ function mkCalendarGrid(page,colors,wdayLabels,weeks){
   weeks.forEach(wk=>{
     wk.forEach(d=>{
       if(d===0){ grid.appendChild(el('div','cal-cell empty')); return; }
-      const dayOfWeek=dow(parseInt($('sel-y').value),parseInt($('sel-m').value),d);
+      const dayOfWeek=dow(y,m,d);
       const isWeekend=(dayOfWeek===0||dayOfWeek===6);
       let cls='cal-cell';
       if(isWeekend) cls+=' weekend';
-      const cell=el('div',cls,d);
+      const cell=el('div',cls);
       cell.style.borderColor=colors.line;
       cell.style.color=isWeekend?colors.dot:colors.ink;
+      const num=el('div','cal-cell-num',d);
+      cell.appendChild(num);
+      if(hmap[d]){
+        const hol=el('div','cal-hol',hmap[d].join(', '));
+        hol.style.color=colors.dim;
+        cell.appendChild(hol);
+      }
       grid.appendChild(cell);
     });
   });
@@ -2059,6 +2275,8 @@ function mkCalendarColumnSpread(y,m,colors,weeks){
 }
 
 function buildSpreadHalf(colors,weeks,weekDowOrder,startPos,endPos,hasNotes,numWeeks){
+  const y=parseInt($('sel-y').value),m=parseInt($('sel-m').value);
+  const hmap=holidayMap(y,m);
   const numDays=endPos-startPos;
   const colFr=Array(numDays).fill('1fr').join(' ')+(hasNotes?' 1fr':'');
   const grid=el('div','cal-sp-grid');
@@ -2093,6 +2311,11 @@ function buildSpreadHalf(colors,weeks,weekDowOrder,startPos,endPos,hasNotes,numW
         const dt=el('span','cal-sp-date',String(d));
         dt.style.color=isWknd?colors.dot:colors.dim;
         cell.appendChild(dt);
+        if(hmap[d]){
+          const hol=el('span','cal-sp-hol',hmap[d].join(', '));
+          hol.style.color=colors.dim;
+          cell.appendChild(hol);
+        }
       }
       grid.appendChild(cell);
     }
@@ -2258,9 +2481,17 @@ function mkDay(y,m,d,c){
 
   const hdr=el('div','d-hdr');
   hdr.style.cssText=`border-bottom:.3pt solid ${colors.line};`;
+  const dowWrap=el('div','d-dow-wrap');
   const dowEl=el('span','d-dow',DOW_FULL[w]);
   dowEl.style.color=getElemColor('dayName',colors.dim);
-  hdr.appendChild(dowEl);
+  dowWrap.appendChild(dowEl);
+  const dayHols=holidayMap(y,m)[d];
+  if(dayHols&&dayHols.length){
+    const holEl=el('span','d-hol',dayHols.join(' · '));
+    holEl.style.color=colors.dim;
+    dowWrap.appendChild(holEl);
+  }
+  hdr.appendChild(dowWrap);
   if(opts.moonPhase){
     const phase=getMoonPhase(y,m,d);
     const moonWrap=el('span','d-moon');
@@ -2759,6 +2990,7 @@ buildThemeGrid();
 buildColorOverrides();
 renderMetrics();
 renderDailyFields();
+renderHolidays();
 renderHabits();
 renderBottomBoxes();
 buildDayPick();
@@ -2770,6 +3002,7 @@ $('h-name').addEventListener('keydown',e=>{if(e.key==='Enter')addHabit();});
 $('box-title-inp').addEventListener('keydown',e=>{if(e.key==='Enter')addBottomBox();});
 $('metric-name').addEventListener('keydown',e=>{if(e.key==='Enter')addMetric();});
 $('daily-field-name').addEventListener('keydown',e=>{if(e.key==='Enter')addDailyField();});
+if($('holiday-name')) $('holiday-name').addEventListener('keydown',e=>{if(e.key==='Enter')addHoliday();});
 
 $('page-preview').addEventListener('click',function(e){
   let node=e.target;
@@ -2825,3 +3058,8 @@ $('preview').addEventListener('touchend',()=>{ _pinchDist=null; },{passive:true}
 
 generate();
 setView(currentView);
+
+// If holidays already enabled, pull worldwide library + full country list, then refresh.
+if(opts.holidays){
+  ensureHolidayLib().then(ok=>{ if(ok){ populateHolidayCountries(); applyOptsToUI(); generate(); } });
+}

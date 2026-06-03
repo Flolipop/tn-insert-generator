@@ -189,6 +189,55 @@
       </div>
     </div>
 
+    <!-- Holidays -->
+    <div class="coll-sec" id="sec-holidays">
+      <div class="coll-hdr" onclick="toggleSection('sec-holidays')">
+        <span class="coll-arrow">&#9654;</span> Holidays
+      </div>
+      <div class="coll-body">
+        <div class="cfg-sec">
+          <div class="toggle-row">
+            <label class="toggle-sw"><input type="checkbox" id="opt-holidays" onchange="onHolidayChange()"><span class="slider"></span></label>
+            <span style="font-size:12px;">Public holidays</span>
+          </div>
+          <div class="cfg-row" style="margin-top:6px;">
+            <label>Country</label>
+            <select id="opt-holidaycountry" onchange="onHolidayCountryChange()" style="flex:1;">
+              <option value="US">United States</option>
+              <option value="GB">United Kingdom</option>
+              <option value="CA">Canada</option>
+              <option value="AU">Australia</option>
+            </select>
+          </div>
+          <div class="cfg-row" style="margin-top:4px;">
+            <label>State / region</label>
+            <select id="opt-holidaystate" onchange="onOptionChange()" style="flex:1;display:none;">
+              <option value="">— Whole country —</option>
+            </select>
+          </div>
+          <div id="holiday-lib-status" style="font-size:9px;opacity:.5;margin-top:3px;">200+ countries loaded on demand. Offline: US, UK, Canada, Australia built in.</div>
+          <div style="margin-top:10px;">
+            <h3 style="font-size:10px;text-transform:uppercase;letter-spacing:.12em;opacity:.6;margin-bottom:6px;">Your Holidays &amp; Events</h3>
+            <div id="holiday-list"></div>
+            <div class="add-row" style="margin-top:4px;flex-wrap:wrap;gap:4px;">
+              <input id="holiday-name" type="text" placeholder="Name" style="width:96px;">
+              <select id="holiday-month" style="width:auto;">
+                <option value="0">Jan</option><option value="1">Feb</option>
+                <option value="2">Mar</option><option value="3">Apr</option>
+                <option value="4">May</option><option value="5">Jun</option>
+                <option value="6">Jul</option><option value="7">Aug</option>
+                <option value="8">Sep</option><option value="9">Oct</option>
+                <option value="10">Nov</option><option value="11">Dec</option>
+              </select>
+              <input id="holiday-day" type="number" min="1" max="31" value="1" style="width:46px;">
+              <button class="btn btn-s btn-sm" onclick="addHoliday()">+ Add</button>
+            </div>
+            <div style="font-size:9px;opacity:.5;margin-top:3px;">Repeats every year. Shown on the calendar and under the weekday on daily pages.</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- Typography -->
     <div class="coll-sec" id="sec-typo">
       <div class="coll-hdr" onclick="toggleSection('sec-typo')">
