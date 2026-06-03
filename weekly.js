@@ -116,6 +116,7 @@ let opts = {
   habRowGap: 1.5,
   moodGap: 2,
   moonSize: 3.5,
+  savePaper: false,
   elementColors: {},
   elementFonts: {},
 };
@@ -426,6 +427,7 @@ function applyOptsToUI(){
   $('opt-reflection').checked=opts.reflectionPage;
   $('opt-linkfg').checked=opts.linkFieldsGraphs;
   $('metric-section').style.display=opts.linkFieldsGraphs?'none':'';
+  $('opt-savepaper').checked=opts.savePaper;
   $('opt-moonphase').checked=opts.moonPhase;
   $('opt-weathericons').checked=opts.weatherIcons;
   $('opt-energybattery').checked=opts.energyBattery;
@@ -496,6 +498,7 @@ function readOptsFromUI(){
   opts.reflectionPage=$('opt-reflection').checked;
   opts.linkFieldsGraphs=$('opt-linkfg').checked;
   opts.flip=document.querySelector('input[name="flip"]:checked')?.value||'long';
+  opts.savePaper=$('opt-savepaper').checked;
   opts.moonPhase=$('opt-moonphase').checked;
   opts.weatherIcons=$('opt-weathericons').checked;
   opts.weatherIconSize=parseFloat($('opt-weathericonsize').value)||3.5;
@@ -2436,6 +2439,16 @@ function setView(mode){
 /* ══════════════════════════════════════════════
    GENERATE + IMPOSE
    ══════════════════════════════════════════════ */
+function getSavePaperLayout(sz,paper){
+  const sw=sz.w*2,sh=sz.h;
+  const cL=Math.floor(paper.w/sw),rL=Math.floor(paper.h/sh);
+  const cP=Math.floor(paper.h/sw),rP=Math.floor(paper.w/sh);
+  const nL=cL*rL,nP=cP*rP;
+  if(nL<=1&&nP<=1) return null;
+  if(nL>=nP) return {cols:cL,rows:rL,portrait:false,spreadsPerSide:nL};
+  return {cols:cP,rows:rP,portrait:true,spreadsPerSide:nP};
+}
+
 function generate(){
   saveState();
   const m=parseInt($('sel-m').value);
@@ -2446,18 +2459,21 @@ function generate(){
   COLOR_VARS.forEach(k=>root.style.setProperty('--'+k,colors[k]));
   const sz=tnSize();
   const paper=getPaperSize();
+  const layout2up=opts.savePaper?getSavePaperLayout(sz,paper):null;
+  const sheetW=layout2up?.portrait?paper.h:paper.w;
+  const sheetH=layout2up?.portrait?paper.w:paper.h;
   root.style.setProperty('--tn-w',sz.w+'mm');
   root.style.setProperty('--tn-h',sz.h+'mm');
   root.style.setProperty('--tn-aspect',sz.w+'/'+sz.h);
   root.style.setProperty('--spread-w',(sz.w*2)+'mm');
-  root.style.setProperty('--sheet-w',paper.w+'mm');
-  root.style.setProperty('--sheet-h',paper.h+'mm');
-  root.style.setProperty('--sheet-aspect',paper.w+'/'+paper.h);
-  const spreadTop=+((paper.h - sz.h)/2).toFixed(2);
-  const spreadLeft=+((paper.w - sz.w*2)/2).toFixed(2);
+  root.style.setProperty('--sheet-w',sheetW+'mm');
+  root.style.setProperty('--sheet-h',sheetH+'mm');
+  root.style.setProperty('--sheet-aspect',sheetW+'/'+sheetH);
+  const spreadTop=+((sheetH - sz.h)/2).toFixed(2);
+  const spreadLeft=+((sheetW - sz.w*2)/2).toFixed(2);
   root.style.setProperty('--spread-top', spreadTop+'mm');
   root.style.setProperty('--spread-left', spreadLeft+'mm');
-  root.style.setProperty('--fold-x',(paper.w/2)+'mm');
+  root.style.setProperty('--fold-x',(sheetW/2)+'mm');
   root.style.setProperty('--icon-sz',    (opts.iconSize??5)+'mm');
   root.style.setProperty('--icon-gap',   (opts.iconGap??1.5)+'mm');
   root.style.setProperty('--icon-stroke',(opts.iconStroke??1.5));
@@ -2480,8 +2496,11 @@ function generate(){
   root.style.setProperty('--ef-cover',   ef('coverTitle'));
   let ps=document.getElementById('dynamic-page-style');
   if(!ps){ps=document.createElement('style');ps.id='dynamic-page-style';document.head.appendChild(ps);}
-  ps.textContent='@page{size:'+paper.page+';margin:0;}';
-  $('paper-tip').textContent=paper.label+' landscape · duplex · fold · staple spine · trim edges';
+  const pageSize=layout2up?.portrait?paper.page.replace(' landscape',''):paper.page;
+  ps.textContent='@page{size:'+pageSize+';margin:0;}';
+  const orientStr=layout2up?.portrait?'portrait':'landscape';
+  const upLabel=layout2up?` · ${layout2up.spreadsPerSide}-up`:'';
+  $('paper-tip').textContent=paper.label+' '+orientStr+upLabel+' · duplex · fold · staple spine · trim edges';
   document.body.style.fontFamily=`'${activeFont()}',serif`;
 
   const els=[];
@@ -2573,7 +2592,8 @@ function generate(){
     pages=kept;
   }
 
-  while(pages.length%4!==0){
+  const padTarget=opts.savePaper?(layout2up?layout2up.spreadsPerSide*4:2):4;
+  while(pages.length%padTarget!==0){
     const dotStyle=getFillStyle(colors);
     pages.push(`<div class="pg" style="width:${sz.w}mm;height:${sz.h}mm;background-color:${colors.page};font-family:'${activeFont()}',serif;${getPagePadding()}${dotStyle}"><div class="sh" style="background:${colors.page};color:${colors.dim};border-bottom:.3pt solid ${colors.line}">Notes</div></div>`);
   }
@@ -2594,34 +2614,89 @@ function generate(){
 
   const container=$('print-area');
   container.innerHTML='';
-  sides.forEach(s=>{
-    const div=document.createElement('div');
-    const isBack=s.lbl.includes('Back');
-    div.className='sheet'+(flipShort&&isBack?' flip-back':'');
-    let cropMarks='';
-    if(opts.cropmarks){
-      cropMarks=`
-        <div class="crop-mark v-mark" style="top:-10mm;left:-.2mm;"></div>
-        <div class="crop-mark v-mark" style="top:-10mm;left:calc(${sz.w}mm - .2mm);"></div>
-        <div class="crop-mark v-mark" style="top:-10mm;right:-.2mm;"></div>
-        <div class="crop-mark v-mark" style="bottom:-10mm;left:-.2mm;"></div>
-        <div class="crop-mark v-mark" style="bottom:-10mm;left:calc(${sz.w}mm - .2mm);"></div>
-        <div class="crop-mark v-mark" style="bottom:-10mm;right:-.2mm;"></div>
-        <div class="crop-mark h-mark" style="left:-10mm;top:-.2mm;"></div>
-        <div class="crop-mark h-mark" style="left:-10mm;bottom:-.2mm;"></div>
-        <div class="crop-mark h-mark" style="right:-10mm;top:-.2mm;"></div>
-        <div class="crop-mark h-mark" style="right:-10mm;bottom:-.2mm;"></div>`;
+
+  if(layout2up){
+    const {cols,rows,spreadsPerSide:M}=layout2up;
+    const sw=sz.w*2,sh=sz.h;
+    const contentW=sw*cols,contentH=sh*rows;
+    const startX=+((sheetW-contentW)/2).toFixed(2);
+    const startY=+((sheetH-contentH)/2).toFixed(2);
+    const positions=[];
+    for(let r=0;r<rows;r++)
+      for(let c=0;c<cols;c++)
+        positions.push({left:+(startX+c*sw).toFixed(2),top:+(startY+r*sh).toFixed(2)});
+
+    const mkCropMarks2up=()=>{
+      if(!opts.cropmarks) return '';
+      const v=(t,l)=>`<div class="crop-mark v-mark" style="position:absolute;top:${t}mm;left:${l}mm;"></div>`;
+      const h=(t,l)=>`<div class="crop-mark h-mark" style="position:absolute;top:${t}mm;left:${l}mm;"></div>`;
+      let m='';
+      m+=v(startY-10,startX-.2)+h(startY-.2,startX-10);
+      m+=v(startY-10,startX+contentW-.2)+h(startY-.2,startX+contentW+2);
+      m+=v(startY+contentH+2,startX-.2)+h(startY+contentH-.2,startX-10);
+      m+=v(startY+contentH+2,startX+contentW-.2)+h(startY+contentH-.2,startX+contentW+2);
+      for(let r=1;r<rows;r++){const cy=+(startY+r*sh).toFixed(2);m+=h(cy-.2,startX-10)+h(cy-.2,startX+contentW+2);}
+      for(let c=1;c<cols;c++){const cx=+(startX+c*sw).toFixed(2);m+=v(startY-10,cx-.2)+v(startY+contentH+2,cx-.2);}
+      for(let i=0;i<positions.length;i++){
+        const fx=+(positions[i].left+sz.w).toFixed(2),fy=positions[i].top;
+        m+=v(fy-10,fx-.2)+v(fy+sh+2,fx-.2);
+      }
+      return m;
+    };
+    const cropMarksHTML=mkCropMarks2up();
+    const numPhysSheets=Math.ceil(sides.length/(M*2));
+
+    for(let s=0;s<numPhysSheets;s++){
+      const sBase=s*M*2;
+      [true,false].forEach(isFront=>{
+        const div=document.createElement('div');
+        div.className='sheet'+(flipShort&&!isFront?' flip-back':'');
+        div.style.cssText=`width:${sheetW}mm;height:${sheetH}mm;`;
+        let html=`<div class="sheet-label">Sheet ${s+1} ${isFront?'Front':'Back'}</div>`;
+        for(let j=0;j<M;j++){
+          const side=sides[sBase+j*2+(isFront?0:1)];
+          if(!side) continue;
+          const pos=positions[j];
+          if(opts.foldline) html+=`<div style="position:absolute;left:${pos.left+sz.w}mm;top:${pos.top}mm;height:${sh}mm;border-left:.3mm dashed #bbb;z-index:10;pointer-events:none;"></div>`;
+          html+=`<div class="spread-container" style="position:absolute;top:${pos.top}mm;left:${pos.left}mm;">${side.l}${side.r}</div>`;
+        }
+        for(let r=1;r<rows;r++){const cy=+(startY+r*sh).toFixed(2);html+=`<div style="position:absolute;left:${startX}mm;top:${cy}mm;width:${contentW}mm;border-top:.25mm dashed #aaa;z-index:5;pointer-events:none;"></div>`;}
+        for(let c=1;c<cols;c++){const cx=+(startX+c*sw).toFixed(2);html+=`<div style="position:absolute;top:${startY}mm;left:${cx}mm;height:${contentH}mm;border-left:.25mm dashed #aaa;z-index:5;pointer-events:none;"></div>`;}
+        html+=cropMarksHTML;
+        div.innerHTML=html;
+        container.appendChild(div);
+      });
     }
-    const foldLine=opts.foldline?'<div class="fold-line"></div>':'';
-    div.innerHTML=`
-      <div class="sheet-label">${s.lbl}</div>
-      ${foldLine}
-      <div class="spread-container">
-        ${s.l}${s.r}
-        ${cropMarks}
-      </div>`;
-    container.appendChild(div);
-  });
+  } else {
+    sides.forEach(s=>{
+      const div=document.createElement('div');
+      const isBack=s.lbl.includes('Back');
+      div.className='sheet'+(flipShort&&isBack?' flip-back':'');
+      let cropMarks='';
+      if(opts.cropmarks){
+        cropMarks=`
+          <div class="crop-mark v-mark" style="top:-10mm;left:-.2mm;"></div>
+          <div class="crop-mark v-mark" style="top:-10mm;left:calc(${sz.w}mm - .2mm);"></div>
+          <div class="crop-mark v-mark" style="top:-10mm;right:-.2mm;"></div>
+          <div class="crop-mark v-mark" style="bottom:-10mm;left:-.2mm;"></div>
+          <div class="crop-mark v-mark" style="bottom:-10mm;left:calc(${sz.w}mm - .2mm);"></div>
+          <div class="crop-mark v-mark" style="bottom:-10mm;right:-.2mm;"></div>
+          <div class="crop-mark h-mark" style="left:-10mm;top:-.2mm;"></div>
+          <div class="crop-mark h-mark" style="left:-10mm;bottom:-.2mm;"></div>
+          <div class="crop-mark h-mark" style="right:-10mm;top:-.2mm;"></div>
+          <div class="crop-mark h-mark" style="right:-10mm;bottom:-.2mm;"></div>`;
+      }
+      const foldLine=opts.foldline?'<div class="fold-line"></div>':'';
+      div.innerHTML=`
+        <div class="sheet-label">${s.lbl}</div>
+        ${foldLine}
+        <div class="spread-container">
+          ${s.l}${s.r}
+          ${cropMarks}
+        </div>`;
+      container.appendChild(div);
+    });
+  }
 
   if(separateCovers.length>0){
     const div=document.createElement('div');
@@ -2657,8 +2732,10 @@ function generate(){
     container.appendChild(mkPrintGuide(n, sides.length));
   }
 
+  const physSides=layout2up?Math.ceil(sides.length/layout2up.spreadsPerSide):sides.length;
   const coverNote=separateCovers.length>0?' + 1 cover sheet':'';
-  $('pg-count').textContent=`${n+separateCovers.length} pages · ${sides.length} print sides${coverNote} (A4 duplex) · fold · staple spine · trim`;
+  const upNote=layout2up?` · ${layout2up.spreadsPerSide}-up`:'';
+  $('pg-count').textContent=`${n+separateCovers.length} pages · ${physSides} print sides${upNote}${coverNote} · fold · staple spine · trim`;
 }
 
 /* ══════════════════════════════════════════════
