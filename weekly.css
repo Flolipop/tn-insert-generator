@@ -135,7 +135,9 @@ input::placeholder{color:rgba(255,255,255,.4);}
 
 /* ── DAILY ───────────────────────── */
 .d-hdr{display:flex;justify-content:space-between;align-items:baseline;position:relative;border-bottom:.3pt solid #ddd9d3;padding-bottom:1.5mm;margin-bottom:2mm;flex-shrink:0;}
+.d-dow-wrap{display:flex;flex-direction:column;gap:.5mm;min-width:0;}
 .d-dow{font-size:var(--fz-dow,6pt);font-weight:700;text-transform:uppercase;letter-spacing:.1em;color:#7a7870;font-family:var(--ef-dayname,inherit);}
+.d-hol{font-size:calc(var(--fz-dow,6pt) - 1pt);font-style:italic;letter-spacing:.02em;color:#9a9890;font-family:var(--ef-dayname,inherit);line-height:1.1;}
 .d-num{font-size:var(--fz-daynum,18pt);font-weight:700;color:#ddd9d3;line-height:1;font-family:var(--ef-daynum,inherit);}
 .d-msw{display:flex;align-items:center;gap:2mm;width:100%;margin-bottom:1.5mm;flex-shrink:0;}
 .d-faces{display:flex;justify-content:flex-start;gap:var(--mood-gap,2mm);align-items:center;flex:2;}
@@ -170,9 +172,11 @@ input::placeholder{color:rgba(255,255,255,.4);}
 /* ── MONTHLY CALENDAR ───────────── */
 .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:0;width:100%;flex:1;}
 .cal-hdr-cell{font-size:5pt;font-weight:700;text-transform:uppercase;text-align:center;color:#7a7870;padding:1mm 0;}
-.cal-cell{font-size:6pt;text-align:left;vertical-align:top;padding:1mm 1.5mm;border:.3pt solid #e0dcd6;color:#1a1a2e;}
+.cal-cell{font-size:6pt;text-align:left;vertical-align:top;padding:1mm 1.5mm;border:.3pt solid #e0dcd6;color:#1a1a2e;overflow:hidden;}
 .cal-cell.empty{border:none;}
 .cal-cell.weekend{color:#aaa8a2;}
+.cal-cell-num{font-size:6pt;line-height:1;}
+.cal-hol{font-size:3.6pt;font-style:italic;line-height:1.05;margin-top:.5mm;overflow:hidden;}
 
 /* ── PAGE NUMBERS ───────────────── */
 .pg-num{position:absolute;bottom:2mm;left:0;right:0;text-align:center;font-size:4.5pt;color:#bbb8b0;}
@@ -255,6 +259,7 @@ input::placeholder{color:rgba(255,255,255,.4);}
 .cal-sp-cell.empty{background-image:none;opacity:.25;}
 .cal-sp-cell.weekend{background-color:rgba(0,0,0,.018);}
 .cal-sp-date{font-size:4pt;padding:.6mm .6mm 0;line-height:1;display:block;position:relative;z-index:1;}
+.cal-sp-hol{font-size:3pt;font-style:italic;line-height:1.05;padding:0 .6mm;display:block;position:relative;z-index:1;overflow:hidden;}
 .cal-sp-notes{border-right:.3pt solid var(--pg-line,#e0dcd6);border-bottom:.3pt solid var(--pg-line,#e0dcd6);overflow:hidden;display:flex;flex-direction:column;padding:.4mm .8mm;gap:0;}
 .cal-sp-nr{display:flex;align-items:center;gap:.8mm;height:3mm;flex-shrink:0;}
 .cal-sp-circ{width:2mm;height:2mm;border-radius:50%;border:.3pt solid var(--pg-line,#e0dcd6);flex-shrink:0;}
