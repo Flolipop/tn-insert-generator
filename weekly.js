@@ -87,6 +87,8 @@ let opts = {
   linkFieldsGraphs: true,
   emptyLines: 4,
   calSpread: false,
+  calNumSz: 6.5,
+  calHolSz: 4.5,
   fillPattern: 'dots',
   customFont: '',
   printGuide: false,
@@ -130,6 +132,7 @@ let opts = {
 const OPT_DEFAULTS = {
   habRowGap:1.5, checkbox:'square', cbsize:5, iconSize:5, iconStroke:1.5, iconGap:1.5,
   fzHabit:6, fzDayNum:18, fzDow:6, fzWeekHdr:6, fzFieldLbl:4.5, fzMoodSz:5,
+  calNumSz:6.5, calHolSz:4.5,
   moonSize:3.5, moodGap:2, moodfaces:5, coverFontSize:12, fillPattern:'dots', dotgrid:5, graphcol:1,
   weatherIconSize:3.5, batterySegs:5,
 };
@@ -650,6 +653,8 @@ function applyOptsToUI(){
     ['opt-moodgap','moodgap-val',opts.moodGap??2,'mm'],
     ['opt-moonsize','moonsize-val',opts.moonSize??3.5,'mm'],
     ['opt-weathericonsize','weathericonsize-val',opts.weatherIconSize??3.5,'mm'],
+    ['opt-cal-numsz','calnumsz-val',opts.calNumSz??6.5,'pt'],
+    ['opt-cal-holsz','calholsz-val',opts.calHolSz??4.5,'pt'],
   ];
   rangeFields.forEach(([inpId,spanId,val,unit])=>{
     const inp=$(inpId); if(inp){inp.value=val; $(spanId).textContent=val+unit;}
@@ -686,6 +691,8 @@ function readOptsFromUI(){
   opts.customFont=$('opt-customfont').value;
   opts.calendar=$('opt-calendar').checked;
   opts.calSpread=$('opt-calspread').checked;
+  opts.calNumSz=parseFloat($('opt-cal-numsz')?.value)||6.5;
+  opts.calHolSz=parseFloat($('opt-cal-holsz')?.value)||4.5;
   opts.cropmarks=$('opt-cropmarks').checked;
   opts.foldline=$('opt-foldline').checked;
   opts.pagenums=$('opt-pagenums').checked;
@@ -2711,6 +2718,8 @@ function generate(){
   root.style.setProperty('--fz-weekhdr', (opts.fzWeekHdr??6)+'pt');
   root.style.setProperty('--fz-dow',     (opts.fzDow??6)+'pt');
   root.style.setProperty('--fz-daynum',  (opts.fzDayNum??18)+'pt');
+  root.style.setProperty('--cal-sp-date-sz',(opts.calNumSz??6.5)+'pt');
+  root.style.setProperty('--cal-sp-hol-sz', (opts.calHolSz??4.5)+'pt');
   root.style.setProperty('--fz-habit',   (opts.fzHabit??6)+'pt');
   root.style.setProperty('--fz-fieldlbl',(opts.fzFieldLbl??4.5)+'pt');
   root.style.setProperty('--mood-sz',    (opts.fzMoodSz??5)+'mm');
